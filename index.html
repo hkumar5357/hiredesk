@@ -1,0 +1,641 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px}
+:root{
+  --sidebar:#1A1A2E;--bg:#FAFAF8;--card:#FFFFFF;--border:#E5E7EB;
+  --text:#111827;--muted:#6B7280;--accent:#4F46E5;--accent-light:#EEF2FF;
+  --red:#DC2626;--red-bg:#FEF2F2;--yellow:#CA8A04;--yellow-bg:#FEFCE8;
+  --blue:#2563EB;--blue-bg:#EFF6FF;--green:#16A34A;--green-bg:#F0FDF4;
+}
+#hd-root{height:100vh}
+.app{display:flex;height:100vh;background:var(--bg);overflow:hidden}
+/* Sidebar */
+.sidebar{width:220px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;height:100vh;position:fixed;top:0;left:0;z-index:100}
+.sb-logo{padding:18px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sb-logo-icon{width:30px;height:30px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo span{font-size:16px;font-weight:800;color:#fff}
+.sb-nav{padding:10px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#94A3B8;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;user-select:none}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,0.06)}
+.nav-item.active{color:#fff;background:#4F46E5}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.sb-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
+.user-av{width:30px;height:30px;border-radius:50%;background:#4F46E5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.user-nm{font-size:12px;font-weight:600;color:#fff}
+.user-rl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.4px}
+/* Main */
+.main{margin-left:220px;flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:50}
+.content{padding:24px}
+/* Components */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:#4F46E5;color:#fff}.btn-primary:hover{background:#4338CA}
+.btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{background:#F3F4F6}
+.btn-danger{background:var(--red-bg);color:var(--red)}
+.btn-sm{padding:5px 12px;font-size:11px}
+.input{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 12px;font-size:13px;outline:none;font-family:inherit;width:100%}
+.input:focus{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block}
+select.input option{background:#fff}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.tag{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:11px;background:#EEF2FF;color:#4F46E5;margin:2px}
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F9FAFB}
+/* Kanban */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.kan-col{min-width:190px;flex:0 0 190px;background:#F3F4F6;border-radius:12px;border:1px solid var(--border);padding:12px}
+.kan-card{background:#fff;border-radius:8px;padding:12px;cursor:pointer;border:1px solid var(--border);margin-bottom:8px;transition:border-color .15s}
+.kan-card:hover{border-color:#4F46E5;box-shadow:0 2px 8px rgba(79,70,229,.08)}
+/* Breadcrumb */
+.bc{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:16px}
+.bc a{color:#4F46E5;cursor:pointer}.bc a:hover{text-decoration:underline}
+/* Login */
+.login-wrap{position:fixed;inset:0;background:#1A1A2E;display:flex;align-items:center;justify-content:center}
+.login-card{background:#fff;border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;padding:28px;width:520px;max-width:100%;max-height:85vh;overflow-y:auto}
+/* Pipeline bar */
+.pbar{display:flex;height:8px;border-radius:20px;overflow:hidden;background:#F3F4F6}
+.pbar-s{height:100%}
+/* Role card */
+.role-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px}
+.role-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all .15s}
+.role-card:hover{border-color:#4F46E5;box-shadow:0 4px 14px rgba(79,70,229,.1)}
+/* Candidate cards */
+.cand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cand-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s}
+.cand-card:hover{border-color:#4F46E5;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+/* Feedback */
+.fb-round{background:var(--bg);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.fb-submitted{background:#fff;border-radius:6px;padding:10px;margin-bottom:8px;border:1px solid var(--border);font-size:12px}
+/* Utils */
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:3px}
+</style>
+
+<div id="hd-root"></div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────
+const STAGES=['Skill Screening','Round 2','Round 3','Final Discussion','Offer'];
+const STAGE_C={'Skill Screening':'#8B5CF6','Round 2':'#3B82F6','Round 3':'#0EA5E9','Final Discussion':'#F59E0B','Offer':'#16A34A'};
+const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
+const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
+const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
+
+// ── DATA ──────────────────────────────────────────────────────────
+let openRoles=[
+  {id:'r1',title:'Frontend Engineer',dept:'Engineering',opened:'2026-05-01',status:'open',jd:'Looking for a skilled Frontend Engineer with strong React and Node.js experience, ideally with AI tooling exposure.\n\nRequired: React, Node.js, JavaScript, HTML/CSS\nNice-to-have: AI/ML experience, React Native, AWS'},
+  {id:'r2',title:'Solutions Architect',dept:'Engineering',opened:'2026-05-01',status:'open',jd:'Seeking an experienced Solutions Architect with cloud expertise and startup background.\n\nRequired: Cloud (AWS/Azure/GCP), System design, Backend architecture\nNice-to-have: AI/LLM, Kafka, Kubernetes'},
+  {id:'r3',title:'Tech Journalist',dept:'Content',opened:'2026-05-15',status:'open',jd:'Looking for a passionate Tech Journalist who can explain complex technical ideas clearly.\n\nRequired: Technical writing, Research, Communication\nNice-to-have: AI knowledge, Video content, Social media'},
+  {id:'r4',title:'Design (AI)',dept:'Design',opened:'2026-05-15',status:'open',jd:'Seeking a designer with strong Figma skills and AI design tool experience.\n\nRequired: Figma, UX design, Prototyping\nNice-to-have: AI design tools, Motion design, Webflow'},
+  {id:'r5',title:'AI Engineer',dept:'Engineering',opened:'2026-05-15',status:'open',jd:'Looking for an AI Engineer with hands-on LLM product experience.\n\nRequired: Python, ML frameworks, LLM APIs\nNice-to-have: MLOps, Agentic AI, Vector databases'},
+  {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
+];
+
+let candidates=[
+  {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5–6',skills:'AI & Prompt Engineering, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'11.5 LPA',ectc:'14–15 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'2',rid:'r1',name:'Nisha Bhati',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'4.2 LPA',ectc:'6 LPA',notice:'15 days',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'3',rid:'r1',name:'Khushboo Singh',yoe:'4',skills:'EdTech, Mentoring, Frontend',li:'',cv:'',email:'',phone:'',cctc:'14 LPA',ectc:'19–20 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'4',rid:'r1',name:'Ravi Ranjan Jha',yoe:'5',skills:'MCA, Full Stack, Frontend',li:'',cv:'',email:'',phone:'',cctc:'12 LPA',ectc:'20 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'5',rid:'r1',name:'Ajay Sharma',yoe:'~8',skills:'Full Stack, Android, AI Products',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'6',rid:'r1',name:'Akshay Pratap Singh',yoe:'~4',skills:'Claude Code, MCP Servers, AI-Native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'7',rid:'r1',name:'Yadunandan Kumar',yoe:'4',skills:'AI Automation, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'8',rid:'r1',name:'Mohit Kumar Jalan',yoe:'~4',skills:'React, Django, Postgres, AI-native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'9',rid:'r1',name:'Suhel Bansal',yoe:'~5',skills:'MERN, React Native, Agentic AI',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'10',rid:'r1',name:'Jeevesh Tewatia',yoe:'~5',skills:'Voice AI, Chatbots, MERN, AWS',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'11',rid:'r1',name:'Rahul Ranjan',yoe:'~4',skills:'Agentic AI, Real-Time Systems',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'12',rid:'r1',name:'Jayant Papola',yoe:'~4',skills:'AI Engineer, Full Stack, LOCAD',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'13',rid:'r1',name:'Komal Kaushik',yoe:'~4',skills:'AI, ThirdEye AI, Computer Vision',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'14',rid:'r1',name:'Yashwant Nishad',yoe:'5.5',skills:'ML/AI, Silverpush',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'15',rid:'r1',name:'Sirjanpreet Kaur',yoe:'~4',skills:'Gen AI, Frontend, Careers360',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'16',rid:'r1',name:'Preet Verma',yoe:'~4.7',skills:'AI Integration, React, Node.js, .NET',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'17',rid:'r1',name:'Shivam Kumar',yoe:'6',skills:'MERN, React Native, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'18',rid:'r1',name:'Sandeep Yadav',yoe:'5',skills:'EdTech, FinTech, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'19',rid:'r1',name:'Pratibha Kumari',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'20',rid:'r1',name:'Kumar Gaurav',yoe:'~4',skills:'GlobalLogic, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'21',rid:'r2',name:'Anand Tripathi',yoe:'14',skills:'AWS SA-Pro, Full Stack, Copilot',li:'',cv:'',email:'',phone:'',cctc:'40 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'22',rid:'r2',name:'Keshav Chaudhary',yoe:'~9',skills:'MCP, AI Engine, CodeTrellis',li:'',cv:'',email:'',phone:'',cctc:'50 LPA',ectc:'50 LPA',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'23',rid:'r2',name:'Mayank Verma',yoe:'6',skills:'AI/LLM, InsurTech, Founding Engineer',li:'',cv:'',email:'',phone:'',cctc:'54 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'24',rid:'r2',name:'Gaurav Shrivastava',yoe:'20',skills:'Paytm, Scaling, Architecture',li:'',cv:'',email:'',phone:'',cctc:'45 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'25',rid:'r2',name:'Ankur C.',yoe:'13',skills:'Fynd, Cursor, Staff EM',li:'',cv:'',email:'',phone:'',cctc:'100 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'26',rid:'r2',name:'Rupesh Sah',yoe:'21',skills:'Agentic AI, Azure OpenAI, Kafka',li:'',cv:'',email:'',phone:'',cctc:'44 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'27',rid:'r2',name:'Ajaya Kumar Nayak',yoe:'22',skills:'NIT Grad, Engineering Head',li:'',cv:'',email:'',phone:'',cctc:'56 LPA',ectc:'70 LPA',notice:'2 months',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'28',rid:'r2',name:'Amit Kakar',yoe:'8',skills:'OpenAI API, Backend, Kyvos',li:'',cv:'',email:'',phone:'',cctc:'60 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'29',rid:'r2',name:'Harshil Sachdeva',yoe:'5',skills:'Leena AI, AIonOS, SA',li:'',cv:'',email:'',phone:'',cctc:'28 LPA',ectc:'40 LPA',notice:'Immediate',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'30',rid:'r2',name:'Pawon Kumar',yoe:'19',skills:'GenAI, LLM, DDD, Entain',li:'',cv:'',email:'',phone:'',cctc:'55 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'31',rid:'r6',name:'Saksham',yoe:'',skills:'Backend Engineer',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'blue',stage:'Round 2',added:'2026-06-01'},
+];
+
+let feedback=[];
+let schedule=[
+  {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:'2026-06-02',stage:'Round 2',status:'Scheduled'},
+];
+
+let S={page:'dashboard',view:'roles',rid:null,cid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+
+// ── UTILS ─────────────────────────────────────────────────────────
+const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+const fmtDate=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
+const roleOf=id=>openRoles.find(r=>r.id===id);
+const candOf=id=>candidates.find(c=>c.id===id);
+
+function sBadge(st){
+  return`<span class="badge" style="background:${STATUS_BG[st]||'#F3F4F6'};color:${STATUS_C[st]||'#6B7280'}">● ${STATUS_LABEL[st]||st}</span>`;
+}
+function stBadge(st){
+  const c=STAGE_C[st]||'#6B7280';
+  return`<span class="badge" style="background:${c}18;color:${c}">${st}</span>`;
+}
+
+let _tt;
+function toast(msg,type='ok'){
+  let t=document.getElementById('hd-toast');
+  if(!t){t=document.createElement('div');t.id='hd-toast';t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;max-width:300px;transition:opacity .3s';document.body.appendChild(t);}
+  const ok=type==='ok';
+  t.style.background=ok?'#F0FDF4':'#FEF2F2';
+  t.style.border=`1px solid ${ok?'#16A34A':'#DC2626'}`;
+  t.style.color=ok?'#16A34A':'#DC2626';
+  t.style.opacity='1';
+  t.textContent=(ok?'✓ ':'✕ ')+msg;
+  clearTimeout(_tt);_tt=setTimeout(()=>t.style.opacity='0',3500);
+}
+
+function modal(html){
+  let m=document.getElementById('hd-modal');
+  if(!m){m=document.createElement('div');m.id='hd-modal';m.className='modal-bg';m.onclick=e=>{if(e.target===m)closeModal();};document.body.appendChild(m);}
+  m.innerHTML=`<div class="modal">${html}</div>`;
+}
+function closeModal(){document.getElementById('hd-modal')?.remove();}
+
+// ── LOGIN ─────────────────────────────────────────────────────────
+function renderLogin(){
+  document.getElementById('hd-root').innerHTML=`
+  <div class="login-wrap">
+    <div class="login-card">
+      <div style="width:48px;height:48px;background:#4F46E5;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div style="font-size:22px;font-weight:800;color:#1A1A2E;margin-bottom:4px">HireDesk</div>
+      <div style="font-size:13px;color:#6B7280;margin-bottom:28px">Uplevyl Internal Hiring Portal</div>
+      <div class="label" style="text-align:left">Continue as</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <button onclick="login('admin','EVA')" class="btn btn-primary" style="flex:1;flex-direction:column;padding:16px;gap:2px">
+          <span style="font-size:13px">Admin</span><span style="font-size:10px;opacity:.75;font-weight:400">Full access</span>
+        </button>
+        <button onclick="login('viewer','Anjali')" class="btn btn-secondary" style="flex:1;flex-direction:column;padding:16px;gap:2px">
+          <span style="font-size:13px">Viewer</span><span style="font-size:10px;color:#9CA3AF;font-weight:400">Pipeline only</span>
+        </button>
+      </div>
+      <div style="font-size:11px;color:#9CA3AF">Production auth: Microsoft OAuth @uplevyl.com</div>
+    </div>
+  </div>`;
+}
+
+function login(role,name){
+  S.user={role,name,email:`${name.toLowerCase()}@uplevyl.com`};
+  localStorage.setItem('hd_u',JSON.stringify(S.user));
+  S.page=role==='viewer'?'pipeline':'dashboard';
+  renderApp();
+}
+function logout(){S.user=null;localStorage.removeItem('hd_u');renderLogin();}
+
+// ── SHELL ─────────────────────────────────────────────────────────
+function renderApp(){
+  const isAdmin=S.user?.role==='admin';
+  const navs=[
+    {id:'dashboard',label:'Dashboard',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
+    {id:'openRoles',label:'Open Roles',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
+    {id:'applications',label:'Applications',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
+    {id:'pipeline',label:'Pipeline',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'},
+  ].filter(n=>!n.adminOnly||isAdmin);
+
+  document.getElementById('hd-root').innerHTML=`
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-icon"><svg width="14" height="14" fill="white" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <span>HireDesk</span>
+      </div>
+      <nav class="sb-nav" id="sb-nav">
+        ${navs.map(n=>`<div class="nav-item${S.page===n.id?' active':''}" onclick="nav('${n.id}')" id="ni-${n.id}">${n.icon}<span>${n.label}</span></div>`).join('')}
+      </nav>
+      <div class="sb-footer">
+        <div class="user-av">${ini(S.user?.name||'U')}</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-nm">${S.user?.name}</div>
+          <div class="user-rl">${S.user?.role}</div>
+        </div>
+        <svg onclick="logout()" title="Sign out" style="width:14px;height:14px;color:#64748B;cursor:pointer;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div style="font-size:14px;font-weight:700;color:var(--text)" id="page-title">${pageTitle()}</div>
+        ${isAdmin?`<div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="showAddCand()">+ Add Candidate</button>
+        </div>`:''}
+      </div>
+      <div class="content" id="mc"></div>
+    </main>
+  </div>`;
+  renderPage();
+}
+
+function pageTitle(){
+  return{dashboard:'Dashboard',openRoles:'Open Roles',applications:'Applications',pipeline:'Pipeline'}[S.page]||'';
+}
+function nav(page){
+  S.page=page;
+  if(page==='applications'){S.view='roles';S.rid=null;S.cid=null;}
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('ni-'+page)?.classList.add('active');
+  document.getElementById('page-title').textContent=pageTitle();
+  renderPage();
+}
+function renderPage(){
+  const f={dashboard:renderDash,openRoles:renderRoles,applications:renderApps,pipeline:renderPipeline};
+  f[S.page]?.();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+function renderDash(){
+  const mc=document.getElementById('mc');
+  const today=new Date().toISOString().split('T')[0];
+  const sched=schedule.filter(s=>s.date===today);
+  const stats=[
+    {l:'Total Candidates',v:candidates.length,i:'👥',c:'#4F46E5'},
+    {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB'},
+    {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04'},
+    {l:'Selected',v:candidates.filter(c=>c.status==='green').length,i:'🎉',c:'#16A34A'},
+  ];
+
+  mc.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+    ${stats.map(s=>`
+    <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px">
+      <div style="width:42px;height:42px;border-radius:10px;background:${s.c}18;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.i}</div>
+      <div><div style="font-size:22px;font-weight:800">${s.v}</div><div style="font-size:11px;color:var(--muted)">${s.l}</div></div>
+    </div>`).join('')}
+  </div>
+
+  ${sched.length?`
+  <div class="card" style="margin-bottom:24px;border-left:4px solid #4F46E5">
+    <div class="flex-between" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700">📅 Today's Interview Schedule</div>
+      <span style="font-size:12px;color:var(--muted)">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</span>
+    </div>
+    ${sched.map(s=>`
+    <div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">${s.cname[0]}</div>
+        <div><div style="font-size:13px;font-weight:700">${s.cname}</div><div style="font-size:11px;color:var(--muted)">${s.role} · Interviewer: <b style="color:var(--text)">${s.interviewer}</b></div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${stBadge(s.stage)}
+        <span class="badge" style="background:${s.status==='Done'?'#F0FDF4':'#FEFCE8'};color:${s.status==='Done'?'#16A34A':'#CA8A04'}">${s.status}</span>
+        ${s.status!=='Done'?`<button class="btn btn-sm" style="background:#F0FDF4;color:#16A34A;border:none" onclick="doneSchedule('${s.id}')">✓ Done</button>`:''}
+      </div>
+    </div>`).join('')}
+  </div>`:''}
+
+  <div style="font-size:15px;font-weight:700;margin-bottom:14px">Pipeline by Role</div>
+  <div class="role-cards">
+    ${openRoles.filter(r=>r.status==='open').map(role=>{
+      const rc=candidates.filter(c=>c.rid===role.id);
+      const cnt={};STAGES.forEach(s=>{cnt[s]=rc.filter(c=>c.stage===s&&c.status!=='red').length;});
+      const tot=rc.filter(c=>c.status!=='red').length||1;
+      return`<div class="role-card" onclick="goRole('${role.id}')">
+        <div class="flex-between" style="margin-bottom:12px">
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">${role.title}</div>
+            <div style="font-size:11px;color:var(--muted)">${role.dept} · ${rc.length} candidate${rc.length!==1?'s':''}</div>
+          </div>
+          <span class="badge" style="background:#EEF2FF;color:#4F46E5">${rc.filter(c=>!['red','green'].includes(c.status)).length} active</span>
+        </div>
+        <div class="pbar" style="margin-bottom:10px">
+          ${STAGES.map(s=>{const w=Math.round((cnt[s]||0)/tot*100);return w>0?`<div class="pbar-s" style="width:${w}%;background:${STAGE_C[s]}"></div>`:''}).join('')}
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${STAGES.filter(s=>cnt[s]>0).map(s=>`<span style="font-size:10px;color:${STAGE_C[s]};font-weight:600">● ${cnt[s]} ${s}</span>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);renderDash();toast('Marked done');}
+function goRole(rid){S.page='applications';S.view='candidates';S.rid=rid;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));document.getElementById('ni-applications')?.classList.add('active');document.getElementById('page-title').textContent='Applications';renderPage();}
+
+// ── OPEN ROLES ────────────────────────────────────────────────────
+function renderRoles(){
+  document.getElementById('mc').innerHTML=`
+  <div class="flex-between" style="margin-bottom:20px">
+    <div><div style="font-size:18px;font-weight:700">Open Roles</div><div style="font-size:13px;color:var(--muted);margin-top:2px">${openRoles.filter(r=>r.status==='open').length} active positions</div></div>
+    <button class="btn btn-primary" onclick="showAddRole()">+ Add Role</button>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+  <table><thead><tr><th>Role</th><th>Department</th><th>Opened</th><th>Candidates</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>${openRoles.map(r=>{
+    const cnt=candidates.filter(c=>c.rid===r.id).length;
+    return`<tr>
+      <td><div style="font-weight:600">${r.title}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${r.jd.split('\n')[0].slice(0,60)}…</div></td>
+      <td><span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span></td>
+      <td style="color:var(--muted);font-size:12px">${fmtDate(r.opened)}</td>
+      <td style="font-weight:600">${cnt}</td>
+      <td>${r.status==='open'?'<span class="badge" style="background:#F0FDF4;color:#16A34A">Open</span>':'<span class="badge" style="background:#F3F4F6;color:var(--muted)">Closed</span>'}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="viewJD('${r.id}')">View JD</button>
+        <button class="btn btn-secondary btn-sm" onclick="goRole('${r.id}')">Candidates</button>
+        ${r.status==='open'?`<button class="btn btn-sm btn-danger" onclick="closeRole('${r.id}')">Close</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function viewJD(id){
+  const r=roleOf(id);if(!r)return;
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">${r.title}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${r.dept} · Opened ${fmtDate(r.opened)}</div>
+    <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text)">${r.jd}</div>
+    <div style="margin-top:20px;text-align:right"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`);
+}
+function closeRole(id){openRoles=openRoles.map(r=>r.id===id?{...r,status:'closed'}:r);renderRoles();toast('Role closed');}
+function showAddRole(){
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add New Role</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Create a new open position</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="label">Role Title *</label><input class="input" id="nr-t" placeholder="e.g. Senior Backend Engineer"></div>
+      <div><label class="label">Department *</label><select class="input" id="nr-d"><option>Engineering</option><option>Design</option><option>Content</option><option>Product</option><option>Operations</option></select></div>
+      <div><label class="label">Job Description</label><textarea class="input" id="nr-j" rows="5" placeholder="Role overview, requirements…" style="resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitRole()">Add Role</button>
+    </div>`);
+}
+function submitRole(){
+  const t=document.getElementById('nr-t')?.value.trim();
+  if(!t){toast('Title required','err');return;}
+  openRoles.push({id:'r'+Date.now(),title:t,dept:document.getElementById('nr-d')?.value,opened:new Date().toISOString().split('T')[0],status:'open',jd:document.getElementById('nr-j')?.value||''});
+  closeModal();renderRoles();toast(t+' added');
+}
+
+// ── APPLICATIONS ──────────────────────────────────────────────────
+function renderApps(){
+  if(S.view==='roles') renderAppRoles();
+  else if(S.view==='candidates') renderAppCands();
+  else if(S.view==='profile') renderProfile();
+}
+
+function renderAppRoles(){
+  document.getElementById('mc').innerHTML=`
+  <div style="font-size:15px;font-weight:700;margin-bottom:4px">All Roles</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Select a role to view its candidates</div>
+  <div class="card" style="padding:0;overflow:hidden">
+  <table><thead><tr><th>Role</th><th>Department</th><th>Total</th><th>Active</th><th></th></tr></thead>
+  <tbody>${openRoles.map(r=>{
+    const rc=candidates.filter(c=>c.rid===r.id);
+    const act=rc.filter(c=>!['red','green'].includes(c.status)).length;
+    return`<tr style="cursor:pointer" onclick="selectRole('${r.id}')">
+      <td><div style="font-weight:600">${r.title}</div></td>
+      <td><span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span></td>
+      <td style="font-weight:600">${rc.length}</td>
+      <td><span class="badge" style="background:#EFF6FF;color:#2563EB">${act} active</span></td>
+      <td><svg style="width:14px;color:var(--muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function selectRole(rid){S.rid=rid;S.view='candidates';S.statusFilter='all';renderApps();}
+
+function renderAppCands(){
+  const role=roleOf(S.rid);
+  let rc=candidates.filter(c=>c.rid===S.rid);
+  if(S.statusFilter!=='all')rc=rc.filter(c=>c.status===S.statusFilter);
+  document.getElementById('mc').innerHTML=`
+  <div class="bc">
+    <a onclick="S.view='roles';renderApps()">Applications</a>
+    <span style="color:#D1D5DB">›</span>
+    <span style="color:var(--text);font-weight:600">${role?.title||''}</span>
+  </div>
+  <div class="flex-between" style="margin-bottom:20px">
+    <div><div style="font-size:18px;font-weight:700">${role?.title||''}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px">${candidates.filter(c=>c.rid===S.rid).length} candidates total</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="showAddCand('${S.rid}')">+ Add Candidate</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+    ${[['all','All','#6B7280'],['yellow','Pipeline','#CA8A04'],['blue','In Process','#2563EB'],['green','Selected','#16A34A'],['red','Rejected','#DC2626']].map(([v,l,c])=>`
+    <button onclick="S.statusFilter='${v}';renderApps()" style="padding:5px 14px;border-radius:20px;border:1px solid ${S.statusFilter===v?c+'66':'var(--border)'};cursor:pointer;font-size:12px;font-weight:600;background:${S.statusFilter===v?c+'18':'transparent'};color:${S.statusFilter===v?c:'var(--muted)'};">${l}</button>`).join('')}
+  </div>
+  ${rc.length===0?`<div class="empty"><div style="font-size:32px;margin-bottom:8px">👤</div>No candidates match this filter</div>`:`
+  <div class="cand-grid">
+    ${rc.map(c=>`
+    <div class="cand-card" onclick="selectCand('${c.id}')">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">${ini(c.name)}</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:2px">${c.name}</div>
+      ${c.yoe?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${c.yoe} yrs exp</div>`:'<div style="margin-bottom:8px"></div>'}
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${sBadge(c.status)}${stBadge(c.stage)}</div>
+    </div>`).join('')}
+  </div>`}`;
+}
+
+function selectCand(cid){S.cid=cid;S.view='profile';renderApps();}
+
+function renderProfile(){
+  const c=candOf(S.cid);if(!c)return;
+  const role=roleOf(c.rid);
+  const cfb=feedback.filter(f=>f.cid===c.id);
+  document.getElementById('mc').innerHTML=`
+  <div class="bc">
+    <a onclick="S.view='roles';renderApps()">Applications</a>
+    <span style="color:#D1D5DB">›</span>
+    <a onclick="S.view='candidates';renderApps()">${role?.title||''}</a>
+    <span style="color:#D1D5DB">›</span>
+    <span style="color:var(--text);font-weight:600">${c.name}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
+          <div style="flex:1">
+            <h2 style="font-size:20px;font-weight:800;margin-bottom:6px">${c.name}</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">${sBadge(c.status)}${stBadge(c.stage)}${c.yoe?`<span style="font-size:12px;color:var(--muted)">${c.yoe} yrs</span>`:''}</div>
+          </div>
+        </div>
+        <div class="grid2" style="margin-bottom:16px">
+          <div><label class="label">Status</label>
+            <select class="input" onchange="updCand('${c.id}','status',this.value)">
+              ${Object.entries(STATUS_LABEL).map(([v,l])=>`<option value="${v}"${c.status===v?' selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+          <div><label class="label">Stage</label>
+            <select class="input" onchange="updCand('${c.id}','stage',this.value)">
+              ${STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="grid2">
+          ${[['LinkedIn URL','li','url','https://linkedin.com/in/...'],['Resume URL','cv','url','https://drive.google.com/...'],['Email Address','email','email','candidate@email.com'],['Phone Number','phone','tel','+91 98765 43210'],['Current CTC','cctc','text','e.g. 12 LPA'],['Expected CTC','ectc','text','e.g. 18–20 LPA'],['Notice Period','notice','text','e.g. Immediate / 30 days'],['Years of Experience','yoe','text','e.g. 4'],].map(([l,f,t,p])=>`
+          <div><label class="label">${l}</label><input class="input" type="${t}" value="${c[f]||''}" placeholder="${p}" onblur="updCand('${c.id}','${f}',this.value)"></div>`).join('')}
+        </div>
+        ${c.skills?`<div style="margin-top:14px"><label class="label">Skills / Tags</label><div>${c.skills.split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div></div>`:''}
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">Round Feedback</div>
+        ${STAGES.map(stage=>{
+          const sfb=cfb.filter(f=>f.stage===stage);
+          return`<div class="fb-round">
+            <div style="margin-bottom:8px">${stBadge(stage)}</div>
+            ${sfb.map(f=>`<div class="fb-submitted"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">${f.reviewer} · ${fmtDate(f.on)}</div>${f.text}</div>`).join('')}
+            <textarea class="input" id="fbt-${c.id}-${stage.replace(/ /g,'_')}" rows="2" placeholder="Add feedback for ${stage}…" style="resize:vertical;font-size:12px;margin-bottom:6px"></textarea>
+            <button class="btn btn-secondary btn-sm" onclick="submitFB('${c.id}','${stage}')">Submit</button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${c.li?`<a href="${c.li}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">💼 LinkedIn</a>`:''}
+          ${c.cv?`<a href="${c.cv}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">📄 Resume</a>`:''}
+          <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="showFBModal('${c.id}')">+ Add Feedback</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Stage Tracker</div>
+        ${STAGES.map(s=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${c.stage===s?STAGE_C[s]:'#E5E7EB'};flex-shrink:0"></div>
+          <div style="font-size:12px;color:${c.stage===s?'var(--text)':'var(--muted)'};font-weight:${c.stage===s?'600':'400'}">${s}</div>
+          ${c.stage===s?'<span style="font-size:10px;color:#4F46E5;font-weight:700;margin-left:auto">Current</span>':''}
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function updCand(id,field,val){
+  candidates=candidates.map(c=>c.id===id?{...c,[field]:val}:c);
+  if(field==='status'||field==='stage')renderProfile();
+}
+function submitFB(cid,stage){
+  const key=`fbt-${cid}-${stage.replace(/ /g,'_')}`;
+  const text=document.getElementById(key)?.value?.trim();
+  if(!text){toast('Enter feedback','err');return;}
+  feedback.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
+  renderProfile();toast('Feedback saved');
+}
+
+// ── PIPELINE ──────────────────────────────────────────────────────
+function renderPipeline(){
+  const isAdmin=S.user?.role==='admin';
+  const active=candidates.filter(c=>['yellow','blue'].includes(c.status));
+  const byRole={};
+  active.forEach(c=>{const r=roleOf(c.rid)?.title||'Other';if(!byRole[r])byRole[r]=[];byRole[r].push(c);});
+
+  document.getElementById('mc').innerHTML=`
+  <div style="font-size:18px;font-weight:700;margin-bottom:4px">Pipeline</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${active.length} active candidates — Yellow (Pipeline) + Blue (In Process)</div>
+  ${Object.entries(byRole).map(([roleName,cands])=>`
+  <div style="margin-bottom:24px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      ${roleName}<span class="badge" style="background:#F3F4F6;color:var(--muted)">${cands.length}</span>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th>Candidate</th><th>Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
+      ${isAdmin?'<th>Curr. CTC</th><th>Exp. CTC</th><th>Notice</th>':''}
+      <th>Feedback</th>
+    </tr></thead><tbody>
+    ${cands.map(c=>{
+      const cnt=feedback.filter(f=>f.cid===c.id).length;
+      return`<tr>
+        <td><div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
+          <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
+        </div></td>
+        <td>${stBadge(c.stage)}</td>
+        <td>${sBadge(c.status)}</td>
+        <td>${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+        <td>${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+        ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--muted)">${cnt}</span>
+          <button class="btn btn-sm" style="background:#EEF2FF;color:#4F46E5;border:none" onclick="showFBModal('${c.id}')">+ Add</button>
+        </div></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>
+  </div>`).join('')}`;
+}
+
+// ── ADD CANDIDATE ─────────────────────────────────────────────────
+function showAddCand(preRid=''){
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Candidate</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Add a new candidate to the pipeline</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid2">
+        <div><label class="label">Full Name *</label><input class="input" id="ac-n" placeholder="Full name"></div>
+        <div><label class="label">Role *</label><select class="input" id="ac-r">${openRoles.filter(r=>r.status==='open').map(r=>`<option value="${r.id}"${preRid===r.id?' selected':''}>${r.title}</option>`).join('')}</select></div>
+        <div><label class="label">Years of Experience</label><input class="input" id="ac-y" placeholder="e.g. 4"></div>
+        <div><label class="label">Initial Status</label><select class="input" id="ac-s"><option value="yellow">Pipeline (Yellow)</option><option value="blue">In Process (Blue)</option></select></div>
+      </div>
+      <div><label class="label">LinkedIn URL</label><input class="input" id="ac-l" placeholder="https://linkedin.com/in/…"></div>
+      <div><label class="label">Resume URL</label><input class="input" id="ac-c" placeholder="https://drive.google.com/…"></div>
+      <div><label class="label">Skills / Tags</label><input class="input" id="ac-sk" placeholder="React, Node.js, AI…"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddCand()">Add Candidate</button>
+    </div>`);
+}
+function submitAddCand(){
+  const name=document.getElementById('ac-n')?.value.trim();
+  if(!name){toast('Name required','err');return;}
+  candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Skill Screening',added:new Date().toISOString().split('T')[0]});
+  closeModal();toast(name+' added to pipeline');
+  renderPage();
+}
+
+// ── FEEDBACK MODAL ────────────────────────────────────────────────
+function showFBModal(cid){
+  const c=candOf(cid);if(!c)return;
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Interview Feedback</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">${c.name} · ${roleOf(c.rid)?.title||''}</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="label">Round *</label><select class="input" id="fb-st">${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div><label class="label">Feedback *</label><textarea class="input" id="fb-tx" rows="4" placeholder="Your assessment…" style="resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitFBModal('${cid}')">Submit</button>
+    </div>`);
+}
+function submitFBModal(cid){
+  const text=document.getElementById('fb-tx')?.value?.trim();
+  if(!text){toast('Enter feedback','err');return;}
+  feedback.push({id:'f'+Date.now(),cid,stage:document.getElementById('fb-st')?.value,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
+  closeModal();toast('Feedback submitted');
+  if(S.page==='applications'&&S.view==='profile')renderProfile();
+  if(S.page==='pipeline')renderPipeline();
+}
+
+
+// ── INIT ──────────────────────────────────────────────────────────
+if(S.user)renderApp();else renderLogin();
+</script>
