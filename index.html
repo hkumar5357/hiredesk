@@ -207,24 +207,36 @@ function renderLogin(){
       </div>
       <div style="font-size:22px;font-weight:800;color:#1A1A2E;margin-bottom:4px">HireDesk</div>
       <div style="font-size:13px;color:#6B7280;margin-bottom:28px">Uplevyl Internal Hiring Portal</div>
-      <div class="label" style="text-align:left">Continue as</div>
-      <div style="display:flex;gap:10px;margin-bottom:20px">
-        <button onclick="login('admin','EVA')" class="btn btn-primary" style="flex:1;flex-direction:column;padding:16px;gap:2px">
-          <span style="font-size:13px">Admin</span><span style="font-size:10px;opacity:.75;font-weight:400">Full access</span>
-        </button>
-        <button onclick="login('viewer','Anjali')" class="btn btn-secondary" style="flex:1;flex-direction:column;padding:16px;gap:2px">
-          <span style="font-size:13px">Viewer</span><span style="font-size:10px;color:#9CA3AF;font-weight:400">Pipeline only</span>
-        </button>
+      <div style="text-align:left;margin-bottom:16px">
+        <label class="label">Email</label>
+        <input id="li-email" type="email" class="input" placeholder="you@uplevyl.com" onkeydown="if(event.key==='Enter')doLogin()"/>
       </div>
-      <div style="font-size:11px;color:#9CA3AF">Production auth: Microsoft OAuth @uplevyl.com</div>
+      <div style="text-align:left;margin-bottom:6px">
+        <label class="label">Password</label>
+        <input id="li-pass" type="password" class="input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div id="li-err" style="font-size:12px;color:#DC2626;min-height:20px;margin-bottom:10px;text-align:left"></div>
+      <button onclick="doLogin()" class="btn btn-primary" style="width:100%;padding:12px;font-size:13px">Sign In</button>
     </div>
   </div>`;
 }
 
-function login(role,name){
-  S.user={role,name,email:`${name.toLowerCase()}@uplevyl.com`};
+const USERS={
+  'skumar@uplevyl.com':{pass:'Pass@1234',role:'admin',name:'S. Kumar'},
+  'hkumar@uplevyl.com':{pass:'Pass@1234',role:'admin',name:'H. Kumar'},
+  'adixit@uplevyl.com':{pass:'Password@1234',role:'viewer',name:'A. Dixit'},
+};
+function doLogin(){
+  const email=(document.getElementById('li-email').value||'').trim().toLowerCase();
+  const pass=document.getElementById('li-pass').value||'';
+  const err=document.getElementById('li-err');
+  const u=USERS[email];
+  if(!u){err.textContent='Email not recognised. Use your @uplevyl.com account.';return;}
+  if(u.pass!==pass){err.textContent='Incorrect password. Please try again.';return;}
+  err.textContent='';
+  S.user={role:u.role,name:u.name,email};
   localStorage.setItem('hd_u',JSON.stringify(S.user));
-  S.page=role==='viewer'?'pipeline':'dashboard';
+  S.page=u.role==='viewer'?'pipeline':'dashboard';
   renderApp();
 }
 function logout(){S.user=null;localStorage.removeItem('hd_u');renderLogin();}
