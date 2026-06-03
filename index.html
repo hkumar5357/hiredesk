@@ -110,12 +110,12 @@ const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
 
 // ── DATA ──────────────────────────────────────────────────────────
 let openRoles=[
-  {id:'r1',title:'Frontend Engineer',dept:'Engineering',opened:'2026-05-01',status:'open',jd:'Looking for a skilled Frontend Engineer with strong React and Node.js experience, ideally with AI tooling exposure.\n\nRequired: React, Node.js, JavaScript, HTML/CSS\nNice-to-have: AI/ML experience, React Native, AWS'},
-  {id:'r2',title:'Solutions Architect',dept:'Engineering',opened:'2026-05-01',status:'open',jd:'Seeking an experienced Solutions Architect with cloud expertise and startup background.\n\nRequired: Cloud (AWS/Azure/GCP), System design, Backend architecture\nNice-to-have: AI/LLM, Kafka, Kubernetes'},
-  {id:'r3',title:'Tech Journalist',dept:'Content',opened:'2026-05-15',status:'open',jd:'Looking for a passionate Tech Journalist who can explain complex technical ideas clearly.\n\nRequired: Technical writing, Research, Communication\nNice-to-have: AI knowledge, Video content, Social media'},
-  {id:'r4',title:'Design (AI)',dept:'Design',opened:'2026-05-15',status:'open',jd:'Seeking a designer with strong Figma skills and AI design tool experience.\n\nRequired: Figma, UX design, Prototyping\nNice-to-have: AI design tools, Motion design, Webflow'},
-  {id:'r5',title:'AI Engineer',dept:'Engineering',opened:'2026-05-15',status:'open',jd:'Looking for an AI Engineer with hands-on LLM product experience.\n\nRequired: Python, ML frameworks, LLM APIs\nNice-to-have: MLOps, Agentic AI, Vector databases'},
-  {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
+  {id:'r1',title:'Frontend Engineer',dept:'Engineering',opened:'2026-05-01',status:'open',priority:'high',jd:'Looking for a skilled Frontend Engineer with strong React and Node.js experience, ideally with AI tooling exposure.\n\nRequired: React, Node.js, JavaScript, HTML/CSS\nNice-to-have: AI/ML experience, React Native, AWS'},
+  {id:'r2',title:'Solutions Architect',dept:'Engineering',opened:'2026-05-01',status:'open',priority:'high',jd:'Seeking an experienced Solutions Architect with cloud expertise and startup background.\n\nRequired: Cloud (AWS/Azure/GCP), System design, Backend architecture\nNice-to-have: AI/LLM, Kafka, Kubernetes'},
+  {id:'r3',title:'Tech Journalist',dept:'Content',opened:'2026-05-15',status:'open',priority:'medium',jd:'Looking for a passionate Tech Journalist who can explain complex technical ideas clearly.\n\nRequired: Technical writing, Research, Communication\nNice-to-have: AI knowledge, Video content, Social media'},
+  {id:'r4',title:'Design (AI)',dept:'Design',opened:'2026-05-15',status:'open',priority:'medium',jd:'Seeking a designer with strong Figma skills and AI design tool experience.\n\nRequired: Figma, UX design, Prototyping\nNice-to-have: AI design tools, Motion design, Webflow'},
+  {id:'r5',title:'AI Engineer',dept:'Engineering',opened:'2026-05-15',status:'open',priority:'high',jd:'Looking for an AI Engineer with hands-on LLM product experience.\n\nRequired: Python, ML frameworks, LLM APIs\nNice-to-have: MLOps, Agentic AI, Vector databases'},
+  {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',priority:'medium',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
 ];
 
 let candidates=[
@@ -419,6 +419,7 @@ function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'
 function goRole(rid){S.page='applications';S.view='candidates';S.rid=rid;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));document.getElementById('ni-applications')?.classList.add('active');document.getElementById('page-title').textContent='Applications';renderPage();}
 
 // ── OPEN ROLES ────────────────────────────────────────────────────
+const PRIORITY_C={high:{bg:'#FEF2F2',c:'#DC2626'},medium:{bg:'#FEFCE8',c:'#CA8A04'},low:{bg:'#F0FDF4',c:'#16A34A'}};
 function renderRoles(){
   document.getElementById('mc').innerHTML=`
   <div class="flex-between" style="margin-bottom:20px">
@@ -426,38 +427,69 @@ function renderRoles(){
     <button class="btn btn-primary" onclick="showAddRole()">+ Add Role</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-  <table><thead><tr><th>Role</th><th>Department</th><th>Opened</th><th>Candidates</th><th>Status</th><th>Actions</th></tr></thead>
+  <table><thead><tr><th>Role</th><th>Department</th><th>Opened</th><th>Candidates</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
   <tbody>${openRoles.map(r=>{
     const cnt=candidates.filter(c=>c.rid===r.id).length;
+    const pr=r.priority||'medium';
+    const pc=PRIORITY_C[pr];
     return`<tr>
       <td><div style="font-weight:600">${r.title}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${r.jd.split('\n')[0].slice(0,60)}…</div></td>
       <td><span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span></td>
       <td style="color:var(--muted);font-size:12px">${fmtDate(r.opened)}</td>
       <td style="font-weight:600">${cnt}</td>
-      <td>${r.status==='open'?'<span class="badge" style="background:#F0FDF4;color:#16A34A">Open</span>':'<span class="badge" style="background:#F3F4F6;color:var(--muted)">Closed</span>'}</td>
+      <td>
+        <select onchange="setRolePriority('${r.id}',this.value)" style="border:1px solid ${pc.c}44;background:${pc.bg};color:${pc.c};border-radius:20px;padding:3px 8px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+          <option value="high" ${pr==='high'?'selected':''}>High</option>
+          <option value="medium" ${pr==='medium'?'selected':''}>Medium</option>
+          <option value="low" ${pr==='low'?'selected':''}>Low</option>
+        </select>
+      </td>
+      <td>
+        <select onchange="setRoleStatus('${r.id}',this.value)" style="border:1px solid ${r.status==='open'?'#16A34A44':'#9CA3AF44'};background:${r.status==='open'?'#F0FDF4':'#F3F4F6'};color:${r.status==='open'?'#16A34A':'#6B7280'};border-radius:20px;padding:3px 8px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+          <option value="open" ${r.status==='open'?'selected':''}>Open</option>
+          <option value="closed" ${r.status==='closed'?'selected':''}>Closed</option>
+        </select>
+      </td>
       <td><div style="display:flex;gap:6px">
-        <button class="btn btn-secondary btn-sm" onclick="viewJD('${r.id}')">View JD</button>
-        <button class="btn btn-secondary btn-sm" onclick="goRole('${r.id}')">Candidates</button>
-        ${r.status==='open'?`<button class="btn btn-sm btn-danger" onclick="closeRole('${r.id}')">Close</button>`:''}
+        <button class="btn btn-secondary btn-sm" onclick="editRole('${r.id}')">Edit JD</button>
       </div></td>
     </tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
-function viewJD(id){
+function setRolePriority(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,priority:val}:r);renderRoles();toast('Priority updated');}
+function setRoleStatus(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,status:val}:r);renderRoles();toast(val==='open'?'Role reopened':'Role closed');}
+function editRole(id){
   const r=roleOf(id);if(!r)return;
-  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">${r.title}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">${r.dept} · Opened ${fmtDate(r.opened)}</div>
-    <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text)">${r.jd}</div>
-    <div style="margin-top:20px;text-align:right"><button class="btn btn-secondary" onclick="closeModal()">Close</button></div>`);
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Edit Role</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Update role details and job description</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="label">Role Title *</label><input class="input" id="er-t" value="${r.title}"></div>
+      <div><label class="label">Department *</label><select class="input" id="er-d">
+        ${['Engineering','Design','Content','Product','Operations'].map(d=>`<option${d===r.dept?' selected':''}>${d}</option>`).join('')}
+      </select></div>
+      <div><label class="label">Job Description</label><textarea class="input" id="er-j" rows="7" style="resize:vertical">${r.jd}</textarea></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRole('${r.id}')">Save Changes</button>
+    </div>`);
 }
-function closeRole(id){openRoles=openRoles.map(r=>r.id===id?{...r,status:'closed'}:r);renderRoles();toast('Role closed');}
+function saveRole(id){
+  const t=document.getElementById('er-t')?.value.trim();
+  if(!t){toast('Title required','err');return;}
+  openRoles=openRoles.map(r=>r.id===id?{...r,title:t,dept:document.getElementById('er-d')?.value,jd:document.getElementById('er-j')?.value||''}:r);
+  closeModal();renderRoles();toast('Role updated');
+}
 function showAddRole(){
   modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add New Role</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Create a new open position</div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label class="label">Role Title *</label><input class="input" id="nr-t" placeholder="e.g. Senior Backend Engineer"></div>
-      <div><label class="label">Department *</label><select class="input" id="nr-d"><option>Engineering</option><option>Design</option><option>Content</option><option>Product</option><option>Operations</option></select></div>
+      <div class="grid2">
+        <div><label class="label">Department *</label><select class="input" id="nr-d"><option>Engineering</option><option>Design</option><option>Content</option><option>Product</option><option>Operations</option></select></div>
+        <div><label class="label">Priority</label><select class="input" id="nr-p"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+      </div>
       <div><label class="label">Job Description</label><textarea class="input" id="nr-j" rows="5" placeholder="Role overview, requirements…" style="resize:vertical"></textarea></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -468,7 +500,7 @@ function showAddRole(){
 function submitRole(){
   const t=document.getElementById('nr-t')?.value.trim();
   if(!t){toast('Title required','err');return;}
-  openRoles.push({id:'r'+Date.now(),title:t,dept:document.getElementById('nr-d')?.value,opened:new Date().toISOString().split('T')[0],status:'open',jd:document.getElementById('nr-j')?.value||''});
+  openRoles.push({id:'r'+Date.now(),title:t,dept:document.getElementById('nr-d')?.value,opened:new Date().toISOString().split('T')[0],status:'open',priority:document.getElementById('nr-p')?.value||'medium',jd:document.getElementById('nr-j')?.value||''});
   closeModal();renderRoles();toast(t+' added');
 }
 
