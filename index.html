@@ -437,7 +437,7 @@ function renderRoles(){
     const pr=r.priority||'medium';
     const pc=PRIORITY_C[pr];
     return`<tr>
-      <td><div style="font-weight:600">${r.title}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${r.jd.split('\n')[0].slice(0,60)}…</div></td>
+      <td><div style="font-weight:600;color:#4F46E5;cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="viewJD('${r.id}')">${r.title}</div></td>
       <td><span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span></td>
       <td style="color:var(--muted);font-size:12px">${fmtDate(r.opened)}</td>
       <td style="font-weight:600">${cnt}</td>
@@ -461,6 +461,21 @@ function renderRoles(){
   }).join('')}</tbody></table></div>`;
 }
 
+function viewJD(id){
+  const r=roleOf(id);if(!r)return;
+  modal(`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+    <div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">${r.title}</div>
+      <span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span>
+    </div>
+    <button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+  </div>
+  <div style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:var(--text);background:var(--bg);border-radius:8px;padding:16px;border:1px solid var(--border)">${r.jd}</div>
+  <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+    <button class="btn btn-primary" onclick="closeModal();editRole('${r.id}')">Edit JD</button>
+  </div>`);
+}
 function setRolePriority(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,priority:val}:r);renderRoles();toast('Priority updated');}
 function setRoleStatus(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,status:val}:r);renderRoles();toast(val==='open'?'Role reopened':'Role closed');}
 function editRole(id){
