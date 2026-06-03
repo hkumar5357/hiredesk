@@ -245,7 +245,7 @@ function renderLogin(){
 const USERS={
   'skumar@uplevyl.com':{pass:'Pass@1234',role:'admin',name:'S. Kumar'},
   'hkumar@uplevyl.com':{pass:'Pass@1234',role:'admin',name:'H. Kumar'},
-  'adixit@uplevyl.com':{pass:'Password@1234',role:'viewer',name:'A. Dixit'},
+  'adixit@uplevyl.com':{pass:'Password@1234',role:'viewer',name:'Anjali'},
 };
 function togglePass(){
   const inp=document.getElementById('li-pass');
@@ -676,17 +676,25 @@ function submitFB(cid,stage){
   const key=`fbt-${cid}-${stage.replace(/ /g,'_')}`;
   const text=document.getElementById(key)?.value?.trim();
   if(!text){toast('Enter feedback','err');return;}
-  feedback.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_feedback',JSON.stringify(feedback));
+
+  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
+  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
+  feedback=fbList;
+
   if(S.user?.role==='viewer'){
     const c=candidates.find(x=>x.id===cid);
-    const role=openRoles.find(r=>r.id===c?.rid)?.title||'';
-    notifications.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role,reviewer:S.user.name,stage,read:false,at:new Date()});
-    localStorage.setItem('hd_notifications',JSON.stringify(notifications));
-    updateBell();
+    const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
+    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
+    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
+    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
+    notifications=notifList;
+    toast('Feedback submitted — admin notified ✓');
+  } else {
+    toast('Feedback saved');
   }
+
   if(S.page==='pipeline')renderPipeline();else renderProfile();
-  toast('Feedback saved');
 }
 
 // ── BELL / NOTIFICATIONS ──────────────────────────────────────────
@@ -831,17 +839,29 @@ function submitFBModal(cid){
   const text=document.getElementById('fb-tx')?.value?.trim();
   const stage=document.getElementById('fb-st')?.value;
   if(!text){toast('Enter feedback','err');return;}
-  feedback.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_feedback',JSON.stringify(feedback));
+
+  // Save feedback
+  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
+  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
+  feedback=fbList;
+
+  // Create notification for admin (viewer only)
   if(S.user?.role==='viewer'){
     const c=candidates.find(x=>x.id===cid);
-    const role=openRoles.find(r=>r.id===c?.rid)?.title||'';
-    notifications.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role,reviewer:S.user.name,stage,read:false,at:new Date()});
-    localStorage.setItem('hd_notifications',JSON.stringify(notifications));
+    const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
+    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
+    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
+    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
+    notifications=notifList;
+    toast('Feedback submitted — admin notified ✓');
+  } else {
+    toast('Feedback submitted');
   }
-  closeModal();toast('Feedback submitted');
+
+  closeModal();
   if(S.page==='applications'&&S.view==='profile')renderProfile();
-  if(S.page==='pipeline')renderPipeline();
+  else if(S.page==='pipeline')renderPipeline();
 }
 
 
