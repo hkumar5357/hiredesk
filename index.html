@@ -103,8 +103,8 @@ tr:hover td{background:#F9FAFB}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────
-const STAGES=['Skill Screening','Round 2','Round 3','Final Discussion','Offer'];
-const STAGE_C={'Skill Screening':'#8B5CF6','Round 2':'#3B82F6','Round 3':'#0EA5E9','Final Discussion':'#F59E0B','Offer':'#16A34A'};
+const STAGES=['Screening','Round 2','Round 3','Technical Round','Final Discussion','Offer Letter Rolled Out'];
+const STAGE_C={'Screening':'#8B5CF6','Round 2':'#3B82F6','Round 3':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -120,36 +120,36 @@ let openRoles=[
 ];
 
 let candidates=[
-  {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5–6',skills:'AI & Prompt Engineering, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'11.5 LPA',ectc:'14–15 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'2',rid:'r1',name:'Nisha Bhati',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'4.2 LPA',ectc:'6 LPA',notice:'15 days',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'3',rid:'r1',name:'Khushboo Singh',yoe:'4',skills:'EdTech, Mentoring, Frontend',li:'',cv:'',email:'',phone:'',cctc:'14 LPA',ectc:'19–20 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'4',rid:'r1',name:'Ravi Ranjan Jha',yoe:'5',skills:'MCA, Full Stack, Frontend',li:'',cv:'',email:'',phone:'',cctc:'12 LPA',ectc:'20 LPA',notice:'Immediate',status:'blue',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'5',rid:'r1',name:'Ajay Sharma',yoe:'~8',skills:'Full Stack, Android, AI Products',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'6',rid:'r1',name:'Akshay Pratap Singh',yoe:'~4',skills:'Claude Code, MCP Servers, AI-Native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'7',rid:'r1',name:'Yadunandan Kumar',yoe:'4',skills:'AI Automation, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'8',rid:'r1',name:'Mohit Kumar Jalan',yoe:'~4',skills:'React, Django, Postgres, AI-native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'9',rid:'r1',name:'Suhel Bansal',yoe:'~5',skills:'MERN, React Native, Agentic AI',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'10',rid:'r1',name:'Jeevesh Tewatia',yoe:'~5',skills:'Voice AI, Chatbots, MERN, AWS',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'11',rid:'r1',name:'Rahul Ranjan',yoe:'~4',skills:'Agentic AI, Real-Time Systems',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'12',rid:'r1',name:'Jayant Papola',yoe:'~4',skills:'AI Engineer, Full Stack, LOCAD',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'13',rid:'r1',name:'Komal Kaushik',yoe:'~4',skills:'AI, ThirdEye AI, Computer Vision',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'14',rid:'r1',name:'Yashwant Nishad',yoe:'5.5',skills:'ML/AI, Silverpush',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'15',rid:'r1',name:'Sirjanpreet Kaur',yoe:'~4',skills:'Gen AI, Frontend, Careers360',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'16',rid:'r1',name:'Preet Verma',yoe:'~4.7',skills:'AI Integration, React, Node.js, .NET',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'17',rid:'r1',name:'Shivam Kumar',yoe:'6',skills:'MERN, React Native, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'18',rid:'r1',name:'Sandeep Yadav',yoe:'5',skills:'EdTech, FinTech, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'19',rid:'r1',name:'Pratibha Kumari',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'20',rid:'r1',name:'Kumar Gaurav',yoe:'~4',skills:'GlobalLogic, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'21',rid:'r2',name:'Anand Tripathi',yoe:'14',skills:'AWS SA-Pro, Full Stack, Copilot',li:'',cv:'',email:'',phone:'',cctc:'40 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'22',rid:'r2',name:'Keshav Chaudhary',yoe:'~9',skills:'MCP, AI Engine, CodeTrellis',li:'',cv:'',email:'',phone:'',cctc:'50 LPA',ectc:'50 LPA',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'23',rid:'r2',name:'Mayank Verma',yoe:'6',skills:'AI/LLM, InsurTech, Founding Engineer',li:'',cv:'',email:'',phone:'',cctc:'54 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'24',rid:'r2',name:'Gaurav Shrivastava',yoe:'20',skills:'Paytm, Scaling, Architecture',li:'',cv:'',email:'',phone:'',cctc:'45 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'25',rid:'r2',name:'Ankur C.',yoe:'13',skills:'Fynd, Cursor, Staff EM',li:'',cv:'',email:'',phone:'',cctc:'100 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'26',rid:'r2',name:'Rupesh Sah',yoe:'21',skills:'Agentic AI, Azure OpenAI, Kafka',li:'',cv:'',email:'',phone:'',cctc:'44 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'27',rid:'r2',name:'Ajaya Kumar Nayak',yoe:'22',skills:'NIT Grad, Engineering Head',li:'',cv:'',email:'',phone:'',cctc:'56 LPA',ectc:'70 LPA',notice:'2 months',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'28',rid:'r2',name:'Amit Kakar',yoe:'8',skills:'OpenAI API, Backend, Kyvos',li:'',cv:'',email:'',phone:'',cctc:'60 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'29',rid:'r2',name:'Harshil Sachdeva',yoe:'5',skills:'Leena AI, AIonOS, SA',li:'',cv:'',email:'',phone:'',cctc:'28 LPA',ectc:'40 LPA',notice:'Immediate',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
-  {id:'30',rid:'r2',name:'Pawon Kumar',yoe:'19',skills:'GenAI, LLM, DDD, Entain',li:'',cv:'',email:'',phone:'',cctc:'55 LPA',ectc:'',notice:'',status:'yellow',stage:'Skill Screening',added:'2026-05-29'},
+  {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5–6',skills:'AI & Prompt Engineering, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'11.5 LPA',ectc:'14–15 LPA',notice:'Immediate',status:'blue',stage:'Screening',added:'2026-05-29'},
+  {id:'2',rid:'r1',name:'Nisha Bhati',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'4.2 LPA',ectc:'6 LPA',notice:'15 days',status:'blue',stage:'Screening',added:'2026-05-29'},
+  {id:'3',rid:'r1',name:'Khushboo Singh',yoe:'4',skills:'EdTech, Mentoring, Frontend',li:'',cv:'',email:'',phone:'',cctc:'14 LPA',ectc:'19–20 LPA',notice:'Immediate',status:'blue',stage:'Screening',added:'2026-05-29'},
+  {id:'4',rid:'r1',name:'Ravi Ranjan Jha',yoe:'5',skills:'MCA, Full Stack, Frontend',li:'',cv:'',email:'',phone:'',cctc:'12 LPA',ectc:'20 LPA',notice:'Immediate',status:'blue',stage:'Screening',added:'2026-05-29'},
+  {id:'5',rid:'r1',name:'Ajay Sharma',yoe:'~8',skills:'Full Stack, Android, AI Products',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'6',rid:'r1',name:'Akshay Pratap Singh',yoe:'~4',skills:'Claude Code, MCP Servers, AI-Native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'7',rid:'r1',name:'Yadunandan Kumar',yoe:'4',skills:'AI Automation, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'8',rid:'r1',name:'Mohit Kumar Jalan',yoe:'~4',skills:'React, Django, Postgres, AI-native',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'9',rid:'r1',name:'Suhel Bansal',yoe:'~5',skills:'MERN, React Native, Agentic AI',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'10',rid:'r1',name:'Jeevesh Tewatia',yoe:'~5',skills:'Voice AI, Chatbots, MERN, AWS',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'11',rid:'r1',name:'Rahul Ranjan',yoe:'~4',skills:'Agentic AI, Real-Time Systems',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'12',rid:'r1',name:'Jayant Papola',yoe:'~4',skills:'AI Engineer, Full Stack, LOCAD',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'13',rid:'r1',name:'Komal Kaushik',yoe:'~4',skills:'AI, ThirdEye AI, Computer Vision',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'14',rid:'r1',name:'Yashwant Nishad',yoe:'5.5',skills:'ML/AI, Silverpush',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'15',rid:'r1',name:'Sirjanpreet Kaur',yoe:'~4',skills:'Gen AI, Frontend, Careers360',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'16',rid:'r1',name:'Preet Verma',yoe:'~4.7',skills:'AI Integration, React, Node.js, .NET',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'17',rid:'r1',name:'Shivam Kumar',yoe:'6',skills:'MERN, React Native, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'18',rid:'r1',name:'Sandeep Yadav',yoe:'5',skills:'EdTech, FinTech, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'19',rid:'r1',name:'Pratibha Kumari',yoe:'4–5',skills:'Frontend, EdTech',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'20',rid:'r1',name:'Kumar Gaurav',yoe:'~4',skills:'GlobalLogic, Full Stack',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'21',rid:'r2',name:'Anand Tripathi',yoe:'14',skills:'AWS SA-Pro, Full Stack, Copilot',li:'',cv:'',email:'',phone:'',cctc:'40 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'22',rid:'r2',name:'Keshav Chaudhary',yoe:'~9',skills:'MCP, AI Engine, CodeTrellis',li:'',cv:'',email:'',phone:'',cctc:'50 LPA',ectc:'50 LPA',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'23',rid:'r2',name:'Mayank Verma',yoe:'6',skills:'AI/LLM, InsurTech, Founding Engineer',li:'',cv:'',email:'',phone:'',cctc:'54 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'24',rid:'r2',name:'Gaurav Shrivastava',yoe:'20',skills:'Paytm, Scaling, Architecture',li:'',cv:'',email:'',phone:'',cctc:'45 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'25',rid:'r2',name:'Ankur C.',yoe:'13',skills:'Fynd, Cursor, Staff EM',li:'',cv:'',email:'',phone:'',cctc:'100 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'26',rid:'r2',name:'Rupesh Sah',yoe:'21',skills:'Agentic AI, Azure OpenAI, Kafka',li:'',cv:'',email:'',phone:'',cctc:'44 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'27',rid:'r2',name:'Ajaya Kumar Nayak',yoe:'22',skills:'NIT Grad, Engineering Head',li:'',cv:'',email:'',phone:'',cctc:'56 LPA',ectc:'70 LPA',notice:'2 months',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'28',rid:'r2',name:'Amit Kakar',yoe:'8',skills:'OpenAI API, Backend, Kyvos',li:'',cv:'',email:'',phone:'',cctc:'60 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'29',rid:'r2',name:'Harshil Sachdeva',yoe:'5',skills:'Leena AI, AIonOS, SA',li:'',cv:'',email:'',phone:'',cctc:'28 LPA',ectc:'40 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-05-29'},
+  {id:'30',rid:'r2',name:'Pawon Kumar',yoe:'19',skills:'GenAI, LLM, DDD, Entain',li:'',cv:'',email:'',phone:'',cctc:'55 LPA',ectc:'',notice:'',status:'yellow',stage:'Screening',added:'2026-05-29'},
   {id:'31',rid:'r6',name:'Saksham',yoe:'',skills:'Backend Engineer',li:'',cv:'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:'blue',stage:'Round 2',added:'2026-06-01'},
 ];
 
@@ -789,7 +789,11 @@ function renderPipeline(){
           <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
           <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
         </div></td>
-        <td>${stBadge(c.stage)}</td>
+        <td onclick="event.stopPropagation()">
+          <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${STAGE_C[c.stage]||'#E5E7EB'}55;background:${STAGE_C[c.stage]||'#F3F4F6'}18;color:${STAGE_C[c.stage]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+            ${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
         <td>${sBadge(c.status)}</td>
         <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
         <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
@@ -804,6 +808,7 @@ function renderPipeline(){
   </div>`).join('')}`;
 }
 
+function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);renderPipeline();toast('Stage updated');}
 function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
 function closePipProfile(){S.pipCid=null;renderPipeline();}
 
@@ -934,7 +939,7 @@ function showAddCand(preRid=''){
 function submitAddCand(){
   const name=document.getElementById('ac-n')?.value.trim();
   if(!name){toast('Name required','err');return;}
-  candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Skill Screening',added:new Date().toISOString().split('T')[0]});
+  candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Screening',added:new Date().toISOString().split('T')[0]});
   closeModal();toast(name+' added to pipeline');
   renderPage();
 }
