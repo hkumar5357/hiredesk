@@ -159,7 +159,7 @@ let schedule=[
   {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:'2026-06-02',stage:'Round 2',status:'Scheduled'},
 ];
 
-let S={page:'dashboard',view:'roles',rid:null,cid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
 // ── UTILS ─────────────────────────────────────────────────────────
 const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
@@ -350,6 +350,7 @@ function pageTitle(){
 }
 function nav(page){
   S.page=page;
+  if(page!=='pipeline') S.pipCid=null;
   if(page==='applications'){S.view='roles';S.rid=null;S.cid=null;}
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('ni-'+page)?.classList.add('active');
@@ -760,6 +761,7 @@ function clearAllNotif(){notifications.forEach(n=>n.read=true);localStorage.setI
 
 // ── PIPELINE ──────────────────────────────────────────────────────
 function renderPipeline(){
+  if(S.pipCid) return renderPipelineProfile();
   feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const isAdmin=S.user?.role==='admin';
   const active=candidates.filter(c=>['yellow','blue'].includes(c.status));
@@ -782,24 +784,131 @@ function renderPipeline(){
     </tr></thead><tbody>
     ${cands.map(c=>{
       const cnt=feedback.filter(f=>f.cid===c.id).length;
-      return`<tr>
+      return`<tr style="cursor:pointer" onclick="openPipProfile('${c.id}')">
         <td><div style="display:flex;align-items:center;gap:10px">
           <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
           <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
         </div></td>
         <td>${stBadge(c.stage)}</td>
         <td>${sBadge(c.status)}</td>
-        <td>${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
-        <td>${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+        <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+        <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
         ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
-        <td><div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:11px;color:var(--muted)">${cnt}</span>
+        <td onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:6px">
+          ${cnt>0?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${cnt} note${cnt>1?'s':''}</span>`:'<span style="font-size:11px;color:var(--muted)">No feedback</span>'}
           <button class="btn btn-sm" style="background:#EEF2FF;color:#4F46E5;border:none" onclick="showFBModal('${c.id}')">+ Add</button>
         </div></td>
       </tr>`;
     }).join('')}
     </tbody></table></div>
   </div>`).join('')}`;
+}
+
+function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
+function closePipProfile(){S.pipCid=null;renderPipeline();}
+
+function renderPipelineProfile(){
+  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  const c=candidates.find(x=>x.id===S.pipCid);if(!c){closePipProfile();return;}
+  const isAdmin=S.user?.role==='admin';
+  const role=roleOf(c.rid);
+  const cfb=feedback.filter(f=>f.cid===c.id);
+
+  document.getElementById('mc').innerHTML=`
+  <div class="bc" style="margin-bottom:20px">
+    <a onclick="closePipProfile()">← Pipeline</a>
+    <span style="color:#D1D5DB">›</span>
+    <span>${c.name}</span>
+  </div>
+
+  <!-- Header card -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;flex-shrink:0">${ini(c.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:18px;font-weight:800;color:var(--text)">${c.name}</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">${role?.title||''}${c.yoe?' · '+c.yoe+' yrs':''}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${stBadge(c.stage)}
+        ${sBadge(c.status)}
+        ${c.cv?`<a href="${c.cv}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">📄 Resume</a>`:''}
+        ${c.li?`<a href="${c.li}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">💼 LinkedIn</a>`:''}
+      </div>
+    </div>
+    ${isAdmin?`
+    <div class="divider"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+      ${[['Email',c.email],['Phone',c.phone],['Current CTC',c.cctc],['Expected CTC',c.ectc],['Notice Period',c.notice]].map(([l,v])=>v?`
+      <div><div class="label">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`:'').join('')}
+    </div>`:''}
+  </div>
+
+  <!-- Feedback by round -->
+  <div style="font-size:15px;font-weight:700;margin-bottom:14px">Interview Feedback</div>
+  ${STAGES.map(stage=>{
+    const sfb=cfb.filter(f=>f.stage===stage);
+    const isCurrent=c.stage===stage;
+    return`
+    <div class="card" style="margin-bottom:12px;border-left:3px solid ${isCurrent?STAGE_C[stage]:'#E5E7EB'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sfb.length?'12px':'0'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${isCurrent?STAGE_C[stage]:'#D1D5DB'};flex-shrink:0"></div>
+          <span style="font-size:13px;font-weight:700;color:${isCurrent?'var(--text)':'var(--muted)'}">${stage}</span>
+          ${isCurrent?`<span style="font-size:10px;font-weight:700;color:${STAGE_C[stage]};background:${STAGE_C[stage]}18;padding:2px 8px;border-radius:20px">Current Stage</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${sfb.length?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${sfb.length} note${sfb.length>1?'s':''}</span>`:''}
+          <button class="btn btn-sm" style="background:#F9FAFB;color:#4F46E5;border:1px solid #E5E7EB" onclick="event.stopPropagation();showFBModalStage('${c.id}','${stage}')">+ Add</button>
+        </div>
+      </div>
+      ${sfb.length?sfb.map(f=>`
+      <div class="fb-submitted" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:24px;height:24px;border-radius:50%;background:#4F46E5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700">${ini(f.reviewer)}</div>
+            <span style="font-size:12px;font-weight:600">${f.reviewer}</span>
+          </div>
+          <span style="font-size:10px;color:var(--muted)">${f.on}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;padding-left:32px">${f.text}</div>
+      </div>`).join(''):`<div style="font-size:12px;color:var(--muted);padding:4px 0">No feedback yet for this round</div>`}
+    </div>`;
+  }).join('')}`;
+}
+
+function showFBModalStage(cid,stage){
+  const c=candOf(cid);if(!c)return;
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Feedback</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">${c.name} · ${stage}</div>
+    <input type="hidden" id="fb-st" value="${stage}">
+    <div><label class="label">Your Assessment *</label><textarea class="input" id="fb-tx" rows="5" placeholder="Write your assessment…" style="resize:vertical"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitFBPip('${cid}','${stage}')">Submit</button>
+    </div>`);
+}
+
+function submitFBPip(cid,stage){
+  const text=document.getElementById('fb-tx')?.value?.trim();
+  if(!text){toast('Enter feedback','err');return;}
+  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
+  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
+  feedback=fbList;
+  if(S.user?.role==='viewer'){
+    const c=candidates.find(x=>x.id===cid);
+    const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
+    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
+    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
+    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
+    notifications=notifList;
+    toast('Feedback submitted — admin notified ✓');
+  } else {
+    toast('Feedback saved');
+  }
+  closeModal();
+  renderPipelineProfile();
 }
 
 // ── ADD CANDIDATE ─────────────────────────────────────────────────
