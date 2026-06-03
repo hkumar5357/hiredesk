@@ -587,6 +587,9 @@ function selectCand(cid){S.cid=cid;S.view='profile';renderApps();}
 
 function renderProfile(){
   const c=candOf(S.cid);if(!c)return;
+  // Reload fresh data
+  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   // Auto-clear notifications for this candidate
   notifications.filter(n=>n.cid===c.id&&!n.read).forEach(n=>n.read=true);
   localStorage.setItem('hd_notifications',JSON.stringify(notifications));
@@ -688,15 +691,22 @@ function submitFB(cid,stage){
 
 // ── BELL / NOTIFICATIONS ──────────────────────────────────────────
 function updateBell(){
+  if(S.user?.role!=='admin')return;
+  // Always read fresh from localStorage — never trust in-memory array alone
+  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   const unread=notifications.filter(n=>!n.read).length;
   const badge=document.getElementById('bell-badge');
-  if(badge){badge.style.display=unread>0?'flex':'none';badge.textContent=unread>9?'9+':unread;}
+  if(badge){badge.style.display=unread>0?'flex':'none';badge.textContent=unread>9?'9+':String(unread);}
 }
+// Cross-tab: if viewer submits in another tab, admin bell updates instantly
+window.addEventListener('storage',e=>{if(e.key==='hd_notifications')updateBell();});
 function toggleBell(e){
   e?.stopPropagation();
   const dd=document.getElementById('bell-dd');
   if(!dd)return;
   if(dd.style.display==='none'){
+    // Reload fresh before opening dropdown
+    notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
     const unread=notifications.filter(n=>!n.read);
     dd.innerHTML=`
       <div class="bell-dd-head">
@@ -718,6 +728,7 @@ function toggleBell(e){
 }
 function closeBellOnOut(){const dd=document.getElementById('bell-dd');if(dd)dd.style.display='none';}
 function openNotif(nid){
+  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   const n=notifications.find(x=>x.id===nid);
   if(!n)return;
   document.getElementById('bell-dd').style.display='none';
@@ -732,6 +743,7 @@ function clearAllNotif(){notifications.forEach(n=>n.read=true);localStorage.setI
 
 // ── PIPELINE ──────────────────────────────────────────────────────
 function renderPipeline(){
+  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const isAdmin=S.user?.role==='admin';
   const active=candidates.filter(c=>['yellow','blue'].includes(c.status));
   const byRole={};
