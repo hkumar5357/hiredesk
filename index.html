@@ -802,8 +802,16 @@ function showFBModal(cid){
 }
 function submitFBModal(cid){
   const text=document.getElementById('fb-tx')?.value?.trim();
+  const stage=document.getElementById('fb-st')?.value;
   if(!text){toast('Enter feedback','err');return;}
-  feedback.push({id:'f'+Date.now(),cid,stage:document.getElementById('fb-st')?.value,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
+  feedback.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Admin',text,on:new Date().toISOString().split('T')[0]});
+  localStorage.setItem('hd_feedback',JSON.stringify(feedback));
+  if(S.user?.role==='viewer'){
+    const c=candidates.find(x=>x.id===cid);
+    const role=openRoles.find(r=>r.id===c?.rid)?.title||'';
+    notifications.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role,reviewer:S.user.name,stage,read:false,at:new Date()});
+    localStorage.setItem('hd_notifications',JSON.stringify(notifications));
+  }
   closeModal();toast('Feedback submitted');
   if(S.page==='applications'&&S.view==='profile')renderProfile();
   if(S.page==='pipeline')renderPipeline();
