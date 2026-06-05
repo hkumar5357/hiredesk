@@ -159,7 +159,7 @@ let schedule=[
   {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:'2026-06-02',stage:'Round 2',status:'Scheduled'},
 ];
 
-let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
 // ── UTILS ─────────────────────────────────────────────────────────
 const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
@@ -350,7 +350,7 @@ function pageTitle(){
 }
 function nav(page){
   S.page=page;
-  if(page!=='pipeline') S.pipCid=null;
+  if(page!=='pipeline'){S.pipCid=null;S.pipRid=null;}
   if(page==='applications'){S.view='roles';S.rid=null;S.cid=null;}
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('ni-'+page)?.classList.add('active');
@@ -366,13 +366,33 @@ function renderPage(){
 function renderDash(){
   const mc=document.getElementById('mc');
   const today=new Date().toISOString().split('T')[0];
-  const sched=schedule.filter(s=>s.date===today);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().split('T')[0];
+  const todaySched=schedule.filter(s=>s.date===today).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const tomorrowSched=schedule.filter(s=>s.date===tomorrow).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const stats=[
     {l:'Total Candidates',v:candidates.length,i:'👥',c:'#4F46E5'},
     {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04'},
     {l:'Selected',v:candidates.filter(c=>c.status==='green').length,i:'🎉',c:'#16A34A'},
   ];
+
+  function schedCard(s){
+    const fmt12=t=>{if(!t)return'';const[h,m]=t.split(':');const hh=+h;return`${hh%12||12}:${m} ${hh>=12?'PM':'AM'}`;}
+    return`<div class="flex-between" style="padding:12px;border-radius:10px;background:#F9FAFB;border:1px solid var(--border);margin-bottom:8px;cursor:pointer" onclick="openCandFromSchedule('${s.cid}')">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">${(s.cname||'?')[0]}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700">${s.cname}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.role} · ${s.round||s.stage}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">🕐 ${fmt12(s.time)||'—'} &nbsp;·&nbsp; 👤 ${s.interviewer}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="badge" style="background:${s.status==='Done'?'#F0FDF4':'#FEFCE8'};color:${s.status==='Done'?'#16A34A':'#CA8A04'}">${s.status}</span>
+        ${s.status!=='Done'?`<button class="btn btn-sm" style="background:#F0FDF4;color:#16A34A;border:none" onclick="event.stopPropagation();doneSchedule('${s.id}')">✓ Done</button>`:''}
+      </div>
+    </div>`;
+  }
 
   mc.innerHTML=`
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
@@ -383,24 +403,21 @@ function renderDash(){
     </div>`).join('')}
   </div>
 
-  ${sched.length?`
+  ${(todaySched.length||tomorrowSched.length)?`
   <div class="card" style="margin-bottom:24px;border-left:4px solid #4F46E5">
-    <div class="flex-between" style="margin-bottom:14px">
-      <div style="font-size:14px;font-weight:700">📅 Today's Interview Schedule</div>
+    <div class="flex-between" style="margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700">📅 Interview Schedule</div>
       <span style="font-size:12px;color:var(--muted)">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</span>
     </div>
-    ${sched.map(s=>`
-    <div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">${s.cname[0]}</div>
-        <div><div style="font-size:13px;font-weight:700">${s.cname}</div><div style="font-size:11px;color:var(--muted)">${s.role} · Interviewer: <b style="color:var(--text)">${s.interviewer}</b></div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${stBadge(s.stage)}
-        <span class="badge" style="background:${s.status==='Done'?'#F0FDF4':'#FEFCE8'};color:${s.status==='Done'?'#16A34A':'#CA8A04'}">${s.status}</span>
-        ${s.status!=='Done'?`<button class="btn btn-sm" style="background:#F0FDF4;color:#16A34A;border:none" onclick="doneSchedule('${s.id}')">✓ Done</button>`:''}
-      </div>
-    </div>`).join('')}
+    ${todaySched.length?`
+      <div style="font-size:11px;font-weight:700;color:#4F46E5;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Today</div>
+      ${todaySched.map(schedCard).join('')}
+    `:''}
+    ${tomorrowSched.length?`
+      <div style="font-size:11px;font-weight:700;color:#CA8A04;letter-spacing:.5px;margin-bottom:8px;margin-top:${todaySched.length?'14px':'0'};text-transform:uppercase">Tomorrow</div>
+      ${tomorrowSched.map(schedCard).join('')}
+    `:''}
+    ${!todaySched.length&&!tomorrowSched.length?`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No interviews scheduled today or tomorrow</div>`:''}
   </div>`:''}
 
   <div style="font-size:15px;font-weight:700;margin-bottom:14px">Pipeline by Role</div>
@@ -430,6 +447,60 @@ function renderDash(){
 }
 
 function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);renderDash();toast('Marked done');}
+
+function openCandFromSchedule(cid){
+  const c=candOf(cid);if(!c)return;
+  S.page='applications';S.view='profile';S.cid=cid;S.rid=c.rid;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('ni-applications')?.classList.add('active');
+  document.getElementById('page-title').textContent='Applications';
+  renderPage();
+}
+
+function scheduleInterview(cid){
+  const c=candOf(cid);if(!c)return;
+  const role=roleOf(c.rid);
+  const existing=schedule.find(s=>s.cid===cid&&s.status!=='Done');
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Schedule Interview</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">${c.name} · ${role?.title||''}</div>
+    <div class="grid2" style="gap:12px;margin-bottom:12px">
+      <div><label class="label">Date</label><input id="si-date" type="date" class="input" value="${existing?.date||''}"></div>
+      <div><label class="label">Time</label><input id="si-time" type="time" class="input" value="${existing?.time||''}"></div>
+    </div>
+    <div class="grid2" style="gap:12px;margin-bottom:18px">
+      <div><label class="label">Round</label>
+        <select id="si-round" class="input">
+          ${['Screening','Round 2','Round 3','Technical Round','Final Discussion'].map(r=>`<option value="${r}" ${(existing?.round||c.stage)===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div><label class="label">Interviewer</label>
+        <select id="si-interviewer" class="input">
+          ${['Anjali','Harsh','Ganesh'].map(i=>`<option value="${i}" ${existing?.interviewer===i?'selected':''}>${i}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSchedule('${cid}')">Save Interview</button>
+    </div>`);
+}
+
+function saveSchedule(cid){
+  const c=candOf(cid);if(!c)return;
+  const date=document.getElementById('si-date').value;
+  const time=document.getElementById('si-time').value;
+  const round=document.getElementById('si-round').value;
+  const interviewer=document.getElementById('si-interviewer').value;
+  if(!date){toast('Please select a date','err');return;}
+  const role=roleOf(c.rid);
+  // Remove existing non-done entry for this candidate
+  schedule=schedule.filter(s=>!(s.cid===cid&&s.status!=='Done'));
+  schedule.push({id:'s'+Date.now(),cid,cname:c.name,role:role?.title||'',interviewer,date,time,round,status:'Scheduled'});
+  closeModal();
+  toast('Interview scheduled for '+c.name);
+  if(S.page==='dashboard')renderDash();
+}
+
 function goRole(rid){S.page='applications';S.view='candidates';S.rid=rid;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));document.getElementById('ni-applications')?.classList.add('active');document.getElementById('page-title').textContent='Applications';renderPage();}
 
 // ── OPEN ROLES ────────────────────────────────────────────────────
@@ -662,6 +733,7 @@ function renderProfile(){
         <div style="display:flex;flex-direction:column;gap:8px">
           ${c.li?`<a href="${c.li}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">💼 LinkedIn</a>`:''}
           ${c.cv?`<a href="${c.cv}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">📄 Resume</a>`:''}
+          <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="scheduleInterview('${c.id}')">📅 Schedule</button>
           <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="showFBModal('${c.id}')">+ Add Feedback</button>
         </div>
       </div>
@@ -762,53 +834,88 @@ function clearAllNotif(){notifications.forEach(n=>n.read=true);localStorage.setI
 // ── PIPELINE ──────────────────────────────────────────────────────
 function renderPipeline(){
   if(S.pipCid) return renderPipelineProfile();
+  if(S.pipRid) return renderPipelineCands();
   feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  const isAdmin=S.user?.role==='admin';
   const active=candidates.filter(c=>['yellow','blue'].includes(c.status));
-  const byRole={};
-  active.forEach(c=>{const r=roleOf(c.rid)?.title||'Other';if(!byRole[r])byRole[r]=[];byRole[r].push(c);});
+
+  // Build role cards
+  const roleRows=openRoles.map(r=>{
+    const rc=active.filter(c=>c.rid===r.id);
+    if(!rc.length)return null;
+    const fbCount=rc.reduce((s,c)=>s+feedback.filter(f=>f.cid===c.id).length,0);
+    const stageBreakdown=STAGES.map(s=>{const n=rc.filter(c=>c.stage===s).length;return n?`<span style="font-size:10px;color:${STAGE_C[s]};font-weight:600">● ${n} ${s}</span>`:null;}).filter(Boolean);
+    return`<div class="role-card" onclick="S.pipRid='${r.id}';renderPipeline()" style="cursor:pointer">
+      <div class="flex-between" style="margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${r.title}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.dept}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="badge" style="background:#EEF2FF;color:#4F46E5">${rc.length} candidate${rc.length!==1?'s':''}</span>
+          ${fbCount?`<span class="badge" style="background:#F0FDF4;color:#16A34A">${fbCount} feedback note${fbCount!==1?'s':''}</span>`:''}
+        </div>
+      </div>
+      <div class="pbar" style="margin-bottom:8px">
+        ${STAGES.map(s=>{const n=rc.filter(c=>c.stage===s).length;const w=Math.round(n/rc.length*100);return w>0?`<div class="pbar-s" style="width:${w}%;background:${STAGE_C[s]}"></div>`:''}).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${stageBreakdown.join('')}</div>
+    </div>`;
+  }).filter(Boolean);
 
   document.getElementById('mc').innerHTML=`
   <div style="font-size:18px;font-weight:700;margin-bottom:4px">Pipeline</div>
-  <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${active.length} active candidates — Yellow (Pipeline) + Blue (In Process)</div>
-  ${Object.entries(byRole).map(([roleName,cands])=>`
-  <div style="margin-bottom:24px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-      ${roleName}<span class="badge" style="background:#F3F4F6;color:var(--muted)">${cands.length}</span>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-    <table><thead><tr>
-      <th>Candidate</th><th>Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
-      ${isAdmin?'<th>Curr. CTC</th><th>Exp. CTC</th><th>Notice</th>':''}
-      <th>Feedback</th>
-    </tr></thead><tbody>
-    ${cands.map(c=>{
-      const cnt=feedback.filter(f=>f.cid===c.id).length;
-      return`<tr style="cursor:pointer" onclick="openPipProfile('${c.id}')">
-        <td><div style="display:flex;align-items:center;gap:10px">
-          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
-          <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
-        </div></td>
-        <td onclick="event.stopPropagation()">
-          <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${STAGE_C[c.stage]||'#E5E7EB'}55;background:${STAGE_C[c.stage]||'#F3F4F6'}18;color:${STAGE_C[c.stage]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
-            ${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
-          </select>
-        </td>
-        <td>${sBadge(c.status)}</td>
-        <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
-        <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
-        ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
-        <td onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:6px">
-          ${cnt>0?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${cnt} note${cnt>1?'s':''}</span>`:'<span style="font-size:11px;color:var(--muted)">No feedback</span>'}
-          <button class="btn btn-sm" style="background:#EEF2FF;color:#4F46E5;border:none" onclick="showFBModal('${c.id}')">+ Add</button>
-        </div></td>
-      </tr>`;
-    }).join('')}
-    </tbody></table></div>
-  </div>`).join('')}`;
+  <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${active.length} active candidates across ${roleRows.length} role${roleRows.length!==1?'s':''}</div>
+  ${roleRows.length?`<div class="role-cards">${roleRows.join('')}</div>`:`<div class="empty">No active candidates in pipeline</div>`}`;
 }
 
-function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);renderPipeline();toast('Stage updated');}
+function renderPipelineCands(){
+  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
+  const isAdmin=S.user?.role==='admin';
+  const role=roleOf(S.pipRid);
+  const cands=candidates.filter(c=>c.rid===S.pipRid&&['yellow','blue'].includes(c.status));
+
+  document.getElementById('mc').innerHTML=`
+  <div class="bc" style="margin-bottom:20px">
+    <a onclick="S.pipRid=null;S.pipCid=null;renderPipeline()">← Pipeline</a>
+    <span style="color:#D1D5DB">›</span>
+    <span>${role?.title||''}</span>
+  </div>
+  <div style="font-size:16px;font-weight:700;margin-bottom:4px">${role?.title||''}</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:18px">${cands.length} active candidate${cands.length!==1?'s':''}</div>
+  ${cands.length?`
+  <div class="card" style="padding:0;overflow:hidden">
+  <table><thead><tr>
+    <th>Candidate</th><th>Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
+    ${isAdmin?'<th>Curr. CTC</th><th>Exp. CTC</th><th>Notice</th>':''}
+    <th>Feedback</th>
+  </tr></thead><tbody>
+  ${cands.map(c=>{
+    const cnt=feedback.filter(f=>f.cid===c.id).length;
+    return`<tr style="cursor:pointer" onclick="openPipProfile('${c.id}')">
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
+        <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
+      </div></td>
+      <td onclick="event.stopPropagation()">
+        <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${STAGE_C[c.stage]||'#E5E7EB'}55;background:${STAGE_C[c.stage]||'#F3F4F6'}18;color:${STAGE_C[c.stage]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+          ${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>${sBadge(c.status)}</td>
+      <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+      <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+      ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
+      <td onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:6px">
+        ${cnt>0?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${cnt} note${cnt>1?'s':''}</span>`:'<span style="font-size:11px;color:var(--muted)">No feedback</span>'}
+        <button class="btn btn-sm" style="background:#EEF2FF;color:#4F46E5;border:none" onclick="showFBModal('${c.id}')">+ Add</button>
+        <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none" onclick="scheduleInterview('${c.id}')">📅</button>
+      </div></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table></div>`:`<div class="empty card">No active candidates for this role</div>`}`;
+}
+
+function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);renderPipelineCands();toast('Stage updated');}
 function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
 function closePipProfile(){S.pipCid=null;renderPipeline();}
 
@@ -821,7 +928,9 @@ function renderPipelineProfile(){
 
   document.getElementById('mc').innerHTML=`
   <div class="bc" style="margin-bottom:20px">
-    <a onclick="closePipProfile()">← Pipeline</a>
+    <a onclick="S.pipRid=null;S.pipCid=null;renderPipeline()">Pipeline</a>
+    <span style="color:#D1D5DB">›</span>
+    <a onclick="S.pipCid=null;renderPipeline()">${roleOf(c.rid)?.title||'Role'}</a>
     <span style="color:#D1D5DB">›</span>
     <span>${c.name}</span>
   </div>
