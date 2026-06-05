@@ -450,11 +450,20 @@ function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'
 
 function openCandFromSchedule(cid){
   const c=candOf(cid);if(!c)return;
-  S.page='applications';S.view='profile';S.cid=cid;S.rid=c.rid;
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  document.getElementById('ni-applications')?.classList.add('active');
-  document.getElementById('page-title').textContent='Applications';
-  renderPage();
+  if(S.user?.role==='viewer'){
+    // Viewers go to pipeline profile (no sensitive fields shown)
+    S.page='pipeline';S.pipRid=c.rid;S.pipCid=cid;
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+    document.getElementById('ni-pipeline')?.classList.add('active');
+    document.getElementById('page-title').textContent='Pipeline';
+    renderPage();
+  } else {
+    S.page='applications';S.view='profile';S.cid=cid;S.rid=c.rid;
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+    document.getElementById('ni-applications')?.classList.add('active');
+    document.getElementById('page-title').textContent='Applications';
+    renderPage();
+  }
 }
 
 function scheduleInterview(cid){
