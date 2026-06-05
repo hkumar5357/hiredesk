@@ -155,9 +155,10 @@ let candidates=[
 
 let feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
 let notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
-let schedule=[
-  {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:'2026-06-02',stage:'Round 2',status:'Scheduled'},
+const _defaultSchedule=[
+  {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:new Date().toISOString().split('T')[0],stage:'Round 2',status:'Scheduled'},
 ];
+let schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
 
 let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
@@ -285,6 +286,7 @@ function renderApp(){
   // Always reload persisted data so switching users picks up latest
   feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
+  schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
   const isAdmin=S.user?.role==='admin';
   const navs=[
     {id:'dashboard',label:'Dashboard',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
@@ -446,7 +448,7 @@ function renderDash(){
   </div>`;
 }
 
-function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);renderDash();toast('Marked done');}
+function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);localStorage.setItem('hd_schedule',JSON.stringify(schedule));renderDash();toast('Marked done');}
 
 function openCandFromSchedule(cid){
   const c=candOf(cid);if(!c)return;
@@ -505,6 +507,7 @@ function saveSchedule(cid){
   // Remove existing non-done entry for this candidate
   schedule=schedule.filter(s=>!(s.cid===cid&&s.status!=='Done'));
   schedule.push({id:'s'+Date.now(),cid,cname:c.name,role:role?.title||'',interviewer,date,time,round,status:'Scheduled'});
+  localStorage.setItem('hd_schedule',JSON.stringify(schedule));
   closeModal();
   toast('Interview scheduled for '+c.name);
   if(S.page==='dashboard')renderDash();
