@@ -186,6 +186,8 @@ let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,s
 
 // ── UTILS ─────────────────────────────────────────────────────────
 const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+const _stageMap={'Round 2':'Behavioral Round','Round 3':'Discussion Round','Technical Round':'Technical Round','Final Discussion':'Final Discussion'};
+const normStage=s=>_stageMap[s]||s;
 const fmtDate=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 const roleOf=id=>openRoles.find(r=>r.id===id);
 const candOf=id=>candidates.find(c=>c.id===id);
@@ -408,7 +410,7 @@ function renderDash(){
         <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">${(s.cname||'?')[0]}</div>
         <div>
           <div style="font-size:13px;font-weight:700">${s.cname}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.role} · ${s.round||s.stage}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.role} · ${normStage(s.round||s.stage)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:1px">🕐 ${fmt12(s.time)||'—'} &nbsp;·&nbsp; 👤 ${s.interviewer}</div>
         </div>
       </div>
