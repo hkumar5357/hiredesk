@@ -668,7 +668,8 @@ function selectRole(rid){S.rid=rid;S.view='candidates';S.statusFilter='all';rend
 function renderAppCands(){
   const role=roleOf(S.rid);
   let rc=candidates.filter(c=>c.rid===S.rid);
-  if(S.statusFilter!=='all')rc=rc.filter(c=>c.status===S.statusFilter);
+  if(S.statusFilter==='offer')rc=rc.filter(c=>c.stage==='Offer Letter Rolled Out');
+  else if(S.statusFilter!=='all')rc=rc.filter(c=>c.status===S.statusFilter);
   document.getElementById('mc').innerHTML=`
   <div class="bc">
     <a onclick="S.view='roles';renderApps()">Applications</a>
@@ -682,7 +683,7 @@ function renderAppCands(){
     <button class="btn btn-primary btn-sm" onclick="showAddCand('${S.rid}')">+ Add Candidate</button>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-    ${[['all','All','#6B7280'],['yellow','Pipeline','#CA8A04'],['blue','In Process','#2563EB'],['green','Selected','#16A34A'],['red','Rejected','#DC2626']].map(([v,l,c])=>`
+    ${[['all','All','#6B7280'],['yellow','Pipeline','#CA8A04'],['blue','In Process','#2563EB'],['green','Selected','#16A34A'],['offer','Offer Letter Rolled Out','#16A34A'],['red','Rejected','#DC2626']].map(([v,l,c])=>`
     <button onclick="S.statusFilter='${v}';renderApps()" style="padding:5px 14px;border-radius:20px;border:1px solid ${S.statusFilter===v?c+'66':'var(--border)'};cursor:pointer;font-size:12px;font-weight:600;background:${S.statusFilter===v?c+'18':'transparent'};color:${S.statusFilter===v?c:'var(--muted)'};">${l}</button>`).join('')}
   </div>
   ${rc.length===0?`<div class="empty"><div style="font-size:32px;margin-bottom:8px">👤</div>No candidates match this filter</div>`:`
