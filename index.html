@@ -504,7 +504,7 @@ function scheduleInterview(cid){
     <div class="grid2" style="gap:12px;margin-bottom:18px">
       <div><label class="label">Round</label>
         <select id="si-round" class="input">
-          ${['Screening','Round 2','Round 3','Technical Round','Final Discussion'].map(r=>`<option value="${r}" ${(existing?.round||c.stage)===r?'selected':''}>${r}</option>`).join('')}
+          ${STAGES.map(r=>`<option value="${r}" ${(existing?.round||c.stage)===r?'selected':''}>${r}</option>`).join('')}
         </select>
       </div>
       <div><label class="label">Interviewer</label>
