@@ -924,7 +924,7 @@ function renderPipelineCands(){
   ${cands.length?`
   <div class="card" style="padding:0;overflow:hidden">
   <table><thead><tr>
-    <th>Candidate</th><th>Interview Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
+    <th>Candidate</th><th>Interview Stage</th><th>Candidate Status</th><th>Resume</th><th>LinkedIn</th>
     ${isAdmin?'<th>Curr. CTC</th><th>Exp. CTC</th><th>Notice</th>':''}
     <th>Feedback</th>
   </tr></thead><tbody>
@@ -940,7 +940,11 @@ function renderPipelineCands(){
           ${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
         </select>
       </td>
-      <td>${sBadge(c.status)}</td>
+      <td onclick="event.stopPropagation()">
+        <select onchange="setPipStatus('${c.id}',this.value)" style="border:1px solid ${STATUS_C[c.status]||'#E5E7EB'}55;background:${STATUS_BG[c.status]||'#F3F4F6'};color:${STATUS_C[c.status]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+          ${[['yellow','Pipeline'],['blue','In Process'],['green','Selected'],['red','Rejected']].map(([v,l])=>`<option value="${v}"${v===c.status?' selected':''}>${l}</option>`).join('')}
+        </select>
+      </td>
       <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
       <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
       ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
@@ -955,6 +959,7 @@ function renderPipelineCands(){
 }
 
 function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);localStorage.setItem('hd_candidates',JSON.stringify(candidates));renderPipelineCands();toast('Stage updated');}
+function setPipStatus(cid,status){candidates=candidates.map(c=>c.id===cid?{...c,status}:c);localStorage.setItem('hd_candidates',JSON.stringify(candidates));renderPipelineCands();toast('Status updated');}
 function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
 function closePipProfile(){S.pipCid=null;renderPipeline();}
 
