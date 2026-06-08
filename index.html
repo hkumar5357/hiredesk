@@ -111,7 +111,7 @@ const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
 
 // ── DATA ──────────────────────────────────────────────────────────
-let openRoles=[
+const _defaultOpenRoles=[
   {id:'r1',title:'Frontend Engineer',dept:'Engineering',opened:'2026-05-01',status:'open',priority:'high',jd:'Looking for a skilled Frontend Engineer with strong React and Node.js experience, ideally with AI tooling exposure.\n\nRequired: React, Node.js, JavaScript, HTML/CSS\nNice-to-have: AI/ML experience, React Native, AWS'},
   {id:'r2',title:'Solutions Architect',dept:'Engineering',opened:'2026-05-01',status:'open',priority:'high',jd:'Seeking an experienced Solutions Architect with cloud expertise and startup background.\n\nRequired: Cloud (AWS/Azure/GCP), System design, Backend architecture\nNice-to-have: AI/LLM, Kafka, Kubernetes'},
   {id:'r3',title:'Tech Journalist',dept:'Content',opened:'2026-05-15',status:'open',priority:'medium',jd:'Looking for a passionate Tech Journalist who can explain complex technical ideas clearly.\n\nRequired: Technical writing, Research, Communication\nNice-to-have: AI knowledge, Video content, Social media'},
@@ -119,6 +119,8 @@ let openRoles=[
   {id:'r5',title:'AI Engineer',dept:'Engineering',opened:'2026-05-15',status:'open',priority:'high',jd:'Looking for an AI Engineer with hands-on LLM product experience.\n\nRequired: Python, ML frameworks, LLM APIs\nNice-to-have: MLOps, Agentic AI, Vector databases'},
   {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',priority:'medium',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
 ];
+let openRoles=JSON.parse(localStorage.getItem('hd_openRoles')||'null')||_defaultOpenRoles.map(r=>({...r}));
+function saveRoles(){localStorage.setItem('hd_openRoles',JSON.stringify(openRoles));}
 
 const _defaultCandidates=[
   {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5 yr',skills:'',li:'https://linkedin.com/in/sandeep-kumar-751b931b',cv:'',email:'sandeepsingh.sre@gmail.com',phone:'+91 95821 19970',cctc:'11.5 LPA',ectc:'14-15 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-01'},
@@ -590,8 +592,8 @@ function viewJD(id){
     <button class="btn btn-primary" onclick="closeModal();editRole('${r.id}')">Edit JD</button>
   </div>`);
 }
-function setRolePriority(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,priority:val}:r);renderRoles();toast('Priority updated');}
-function setRoleStatus(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,status:val}:r);renderRoles();toast(val==='open'?'Role reopened':'Role closed');}
+function setRolePriority(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,priority:val}:r);saveRoles();renderRoles();toast('Priority updated');}
+function setRoleStatus(id,val){openRoles=openRoles.map(r=>r.id===id?{...r,status:val}:r);saveRoles();renderRoles();toast(val==='open'?'Role reopened':'Role closed');}
 function editRole(id){
   const r=roleOf(id);if(!r)return;
   modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Edit Role</div>
@@ -612,7 +614,7 @@ function saveRole(id){
   const t=document.getElementById('er-t')?.value.trim();
   if(!t){toast('Title required','err');return;}
   openRoles=openRoles.map(r=>r.id===id?{...r,title:t,dept:document.getElementById('er-d')?.value,jd:document.getElementById('er-j')?.value||''}:r);
-  closeModal();renderRoles();toast('Role updated');
+  saveRoles();closeModal();renderRoles();toast('Role updated');
 }
 function showAddRole(){
   modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add New Role</div>
@@ -634,7 +636,7 @@ function submitRole(){
   const t=document.getElementById('nr-t')?.value.trim();
   if(!t){toast('Title required','err');return;}
   openRoles.push({id:'r'+Date.now(),title:t,dept:document.getElementById('nr-d')?.value,opened:new Date().toISOString().split('T')[0],status:'open',priority:document.getElementById('nr-p')?.value||'medium',jd:document.getElementById('nr-j')?.value||''});
-  closeModal();renderRoles();toast(t+' added');
+  saveRoles();closeModal();renderRoles();toast(t+' added');
 }
 
 // ── APPLICATIONS ──────────────────────────────────────────────────
