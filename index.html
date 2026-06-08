@@ -103,8 +103,9 @@ tr:hover td{background:#F9FAFB}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────
-const STAGES=['Screening','Round 2','Round 3','Technical Round','Final Discussion','Offer Letter Rolled Out'];
-const STAGE_C={'Screening':'#8B5CF6','Round 2':'#3B82F6','Round 3':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
+const STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
+const STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
+const FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -119,7 +120,7 @@ let openRoles=[
   {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',priority:'medium',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
 ];
 
-let candidates=[
+const _defaultCandidates=[
   {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5 yr',skills:'',li:'https://linkedin.com/in/sandeep-kumar-751b931b',cv:'',email:'sandeepsingh.sre@gmail.com',phone:'+91 95821 19970',cctc:'11.5 LPA',ectc:'14-15 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-01'},
   {id:'2',rid:'r1',name:'Ravi Ranjan Jha',yoe:'5.3 yr',skills:'',li:'https://linkedin.com/in/ravi-ranjan-jha',cv:'',email:'rjha4743@gmail.com',phone:'+91 99711 35107',cctc:'12 lpa',ectc:'20 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-01'},
   {id:'3',rid:'r1',name:'Khushboo Singh',yoe:'4.3 yr',skills:'',li:'https://linkedin.com/in/khushboosingh2',cv:'',email:'khushboo.singhhjs@gmail.com',phone:'+91 86187 17422',cctc:'14 lpa',ectc:'19-20 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-01'},
@@ -171,6 +172,7 @@ let candidates=[
   {id:'49',rid:'r1',name:'Lokesh Kumar Bairwa',yoe:'3',skills:'Frontend Engineer',li:'https://www.linkedin.com/in/lokeshkumar777/?lipi=urn%3Ali%3Apage%3Ad_flagship3_applicant_eval_applicant_detail%3BXruoLU2HT2KTbwgN4f7vUQ%3D%3D',cv:'',email:'lokeshdevgan777@gmail.com',phone:'+91 7065667959',cctc:'9 LPA',ectc:'12 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-08'}
 ];
 
+let candidates=JSON.parse(localStorage.getItem('hd_candidates')||'null')||_defaultCandidates.map(c=>({...c}));
 let feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
 let notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
 const _defaultSchedule=[
@@ -302,6 +304,7 @@ async function logout(){await sb.auth.signOut();S.user=null;localStorage.removeI
 // ── SHELL ─────────────────────────────────────────────────────────
 function renderApp(){
   // Always reload persisted data so switching users picks up latest
+  candidates=JSON.parse(localStorage.getItem('hd_candidates')||'null')||_defaultCandidates.map(c=>({...c}));
   feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
@@ -746,7 +749,7 @@ function renderProfile(){
       </div>
       <div class="card" id="fb-section">
         <div style="font-size:14px;font-weight:700;margin-bottom:14px">Round Feedback</div>
-        ${STAGES.map(stage=>{
+        ${FB_STAGES.map(stage=>{
           const sfb=cfb.filter(f=>f.stage===stage);
           return`<div class="fb-round">
             <div style="margin-bottom:8px">${stBadge(stage)}</div>
@@ -782,6 +785,7 @@ function renderProfile(){
 
 function updCand(id,field,val){
   candidates=candidates.map(c=>c.id===id?{...c,[field]:val}:c);
+  localStorage.setItem('hd_candidates',JSON.stringify(candidates));
   if(field==='status'||field==='stage')renderProfile();
 }
 function submitFB(cid,stage){
@@ -818,8 +822,12 @@ function updateBell(){
   const badge=document.getElementById('bell-badge');
   if(badge){badge.style.display=unread>0?'flex':'none';badge.textContent=unread>9?'9+':String(unread);}
 }
-// Cross-tab: if viewer submits in another tab, admin bell updates instantly
-window.addEventListener('storage',e=>{if(e.key==='hd_notifications')updateBell();});
+// Cross-tab sync: reload data when another tab makes changes
+window.addEventListener('storage',e=>{
+  if(e.key==='hd_notifications')updateBell();
+  if(e.key==='hd_candidates'&&e.newValue)candidates=JSON.parse(e.newValue);
+  if(e.key==='hd_schedule'&&e.newValue)schedule=JSON.parse(e.newValue);
+});
 function toggleBell(e){
   e?.stopPropagation();
   const dd=document.getElementById('bell-dd');
@@ -945,7 +953,7 @@ function renderPipelineCands(){
   </tbody></table></div>`:`<div class="empty card">No active candidates for this role</div>`}`;
 }
 
-function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);renderPipelineCands();toast('Stage updated');}
+function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);localStorage.setItem('hd_candidates',JSON.stringify(candidates));renderPipelineCands();toast('Stage updated');}
 function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
 function closePipProfile(){S.pipCid=null;renderPipeline();}
 
@@ -990,7 +998,7 @@ function renderPipelineProfile(){
 
   <!-- Feedback by round -->
   <div style="font-size:15px;font-weight:700;margin-bottom:14px">Interview Feedback</div>
-  ${STAGES.map(stage=>{
+  ${FB_STAGES.map(stage=>{
     const sfb=cfb.filter(f=>f.stage===stage);
     const isCurrent=c.stage===stage;
     return`
@@ -1079,6 +1087,7 @@ function submitAddCand(){
   const name=document.getElementById('ac-n')?.value.trim();
   if(!name){toast('Name required','err');return;}
   candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Screening',added:new Date().toISOString().split('T')[0]});
+  localStorage.setItem('hd_candidates',JSON.stringify(candidates));
   closeModal();toast(name+' added to pipeline');
   renderPage();
 }
@@ -1089,7 +1098,7 @@ function showFBModal(cid){
   modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Interview Feedback</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:18px">${c.name} · ${roleOf(c.rid)?.title||''}</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><label class="label">Round *</label><select class="input" id="fb-st">${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div><label class="label">Round *</label><select class="input" id="fb-st">${FB_STAGES.map(s=>`<option value="${s}"${s===c.stage&&FB_STAGES.includes(c.stage)?' selected':''}>${s}</option>`).join('')}</select></div>
       <div><label class="label">Feedback *</label><textarea class="input" id="fb-tx" rows="4" placeholder="Your assessment…" style="resize:vertical"></textarea></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
