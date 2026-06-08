@@ -103,8 +103,8 @@ tr:hover td{background:#F9FAFB}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────
-const STAGES=['Screening','Interview Stage 1','Interview Stage 2','Interview Stage 3','Final Interview','Offer Letter Rolled Out'];
-const STAGE_C={'Screening':'#8B5CF6','Interview Stage 1':'#3B82F6','Interview Stage 2':'#0EA5E9','Interview Stage 3':'#EC4899','Final Interview':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
+const STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
+const STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
 const FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
@@ -176,7 +176,7 @@ let candidates=JSON.parse(localStorage.getItem('hd_candidates')||'null')||_defau
 let feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
 let notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
 const _defaultSchedule=[
-  {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:new Date().toISOString().split('T')[0],stage:'Interview Stage 1',status:'Scheduled'},
+  {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:new Date().toISOString().split('T')[0],stage:'Behavioral Round',status:'Scheduled'},
 ];
 let schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
 
@@ -735,7 +735,7 @@ function renderProfile(){
               ${Object.entries(STATUS_LABEL).map(([v,l])=>`<option value="${v}"${c.status===v?' selected':''}>${l}</option>`).join('')}
             </select>
           </div>
-          <div><label class="label">Stage</label>
+          <div><label class="label">Interview Stage</label>
             <select class="input" onchange="updCand('${c.id}','stage',this.value)">
               ${STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('')}
             </select>
@@ -772,7 +772,7 @@ function renderProfile(){
         </div>
       </div>
       <div class="card">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Stage Tracker</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Interview Stage Tracker</div>
         ${STAGES.map(s=>`
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <div style="width:8px;height:8px;border-radius:50%;background:${c.stage===s?STAGE_C[s]:'#E5E7EB'};flex-shrink:0"></div>
@@ -924,7 +924,7 @@ function renderPipelineCands(){
   ${cands.length?`
   <div class="card" style="padding:0;overflow:hidden">
   <table><thead><tr>
-    <th>Candidate</th><th>Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
+    <th>Candidate</th><th>Interview Stage</th><th>Status</th><th>Resume</th><th>LinkedIn</th>
     ${isAdmin?'<th>Curr. CTC</th><th>Exp. CTC</th><th>Notice</th>':''}
     <th>Feedback</th>
   </tr></thead><tbody>
