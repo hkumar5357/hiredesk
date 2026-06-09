@@ -686,6 +686,7 @@ function renderAppCands(){
   let rc=candidates.filter(c=>c.rid===S.rid);
   if(S.statusFilter==='offer')rc=rc.filter(c=>c.stage==='Offer Letter Rolled Out');
   else if(S.statusFilter!=='all')rc=rc.filter(c=>c.status===S.statusFilter);
+  rc=rc.slice().sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('mc').innerHTML=`
   <div class="bc">
     <a onclick="S.view='roles';renderApps()">Applications</a>
@@ -706,7 +707,13 @@ function renderAppCands(){
   <div class="cand-grid">
     ${rc.map(c=>`
     <div class="cand-card" onclick="selectCand('${c.id}')">
-      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">${ini(c.name)}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0">${ini(c.name)}</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          ${c.li?`<a href="${c.li}" target="_blank" onclick="event.stopPropagation()" title="LinkedIn" style="width:26px;height:26px;border-radius:6px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;color:#4F46E5;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>`:''}
+          ${c.cv?`<a href="${c.cv}" target="_blank" onclick="event.stopPropagation()" title="Resume" style="width:26px;height:26px;border-radius:6px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#16A34A;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></a>`:''}
+        </div>
+      </div>
       <div style="font-size:13px;font-weight:700;margin-bottom:2px">${c.name}</div>
       ${c.yoe?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px">${c.yoe} yrs exp</div>`:'<div style="margin-bottom:8px"></div>'}
       <div style="display:flex;gap:5px;flex-wrap:wrap">${sBadge(c.status)}${stBadge(c.stage)}</div>
@@ -943,7 +950,7 @@ function renderPipelineCands(){
   feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const isAdmin=S.user?.role==='admin';
   const role=roleOf(S.pipRid);
-  const cands=candidates.filter(c=>c.rid===S.pipRid&&['yellow','blue'].includes(c.status));
+  const cands=candidates.filter(c=>c.rid===S.pipRid&&['yellow','blue'].includes(c.status)).slice().sort((a,b)=>a.name.localeCompare(b.name));
 
   document.getElementById('mc').innerHTML=`
   <div class="bc" style="margin-bottom:20px">
@@ -977,8 +984,8 @@ function renderPipelineCands(){
           ${[['yellow','Pipeline'],['blue','In Process'],['green','Selected'],['red','Rejected']].map(([v,l])=>`<option value="${v}"${v===c.status?' selected':''}>${l}</option>`).join('')}
         </select>
       </td>
-      <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="color:#4F46E5;font-size:12px">📄 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
-      <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="color:#4F46E5;font-size:12px">💼 View</a>`:'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+      <td onclick="event.stopPropagation()">${c.cv?`<a href="${c.cv}" target="_blank" style="width:28px;height:28px;border-radius:6px;background:#F0FDF4;display:inline-flex;align-items:center;justify-content:center;color:#16A34A;text-decoration:none" title="Resume"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></a>`:'<span style="color:#D1D5DB;font-size:12px">—</span>'}</td>
+      <td onclick="event.stopPropagation()">${c.li?`<a href="${c.li}" target="_blank" style="width:28px;height:28px;border-radius:6px;background:#EEF2FF;display:inline-flex;align-items:center;justify-content:center;color:#4F46E5;text-decoration:none" title="LinkedIn"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>`:'<span style="color:#D1D5DB;font-size:12px">—</span>'}</td>
       ${isAdmin?`<td style="font-size:12px">${c.cctc||'—'}</td><td style="font-size:12px">${c.ectc||'—'}</td><td style="font-size:12px">${c.notice||'—'}</td>`:''}
       <td onclick="event.stopPropagation()"><div style="display:flex;align-items:center;gap:6px">
         ${cnt>0?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${cnt} note${cnt>1?'s':''}</span>`:'<span style="font-size:11px;color:var(--muted)">No feedback</span>'}
