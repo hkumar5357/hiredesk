@@ -661,17 +661,21 @@ function renderApps(){
 }
 
 function renderAppRoles(){
+  const prioOrder={high:0,medium:1,low:2};
+  const sorted=[...openRoles].sort((a,b)=>(prioOrder[a.priority]??1)-(prioOrder[b.priority]??1));
   document.getElementById('mc').innerHTML=`
   <div style="font-size:15px;font-weight:700;margin-bottom:4px">All Roles</div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Select a role to view its candidates</div>
   <div class="card" style="padding:0;overflow:hidden">
-  <table><thead><tr><th>Role</th><th>Department</th><th>Total</th><th>Active</th><th></th></tr></thead>
-  <tbody>${openRoles.map(r=>{
+  <table><thead><tr><th>Role</th><th>Department</th><th>Priority</th><th>Total</th><th>Active</th><th></th></tr></thead>
+  <tbody>${sorted.map(r=>{
     const rc=candidates.filter(c=>c.rid===r.id);
     const act=rc.filter(c=>!['red','green'].includes(c.status)).length;
+    const pc={high:{bg:'#FEF2F2',c:'#DC2626'},medium:{bg:'#FEFCE8',c:'#CA8A04'},low:{bg:'#F0FDF4',c:'#16A34A'}}[r.priority]||{bg:'#F3F4F6',c:'#6B7280'};
     return`<tr style="cursor:pointer" onclick="selectRole('${r.id}')">
       <td><div style="font-weight:600">${r.title}</div></td>
       <td><span class="badge" style="background:#F3F4F6;color:var(--muted)">${r.dept}</span></td>
+      <td><span class="badge" style="background:${pc.bg};color:${pc.c};text-transform:capitalize">${r.priority||'—'}</span></td>
       <td style="font-weight:600">${rc.length}</td>
       <td><span class="badge" style="background:#EFF6FF;color:#2563EB">${act} active</span></td>
       <td><svg style="width:14px;color:var(--muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></td>
