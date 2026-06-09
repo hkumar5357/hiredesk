@@ -175,7 +175,15 @@ const _defaultCandidates=[
   {id:'50',rid:'r1',name:'Aditya Kumar Yadav',yoe:'2.6',skills:'React, Angular, Node.js, .NET, Azure, TypeScript',li:'',cv:'',email:'imadi9415980@gmail.com',phone:'+91 8787208429',cctc:'8.9 LPA',ectc:'12-14 LPA',notice:'45 days',status:'yellow',stage:'Screening',added:'2026-06-09'}
 ];
 
-let candidates=JSON.parse(localStorage.getItem('hd_candidates')||'null')||_defaultCandidates.map(c=>({...c}));
+let candidates=(()=>{
+  const stored=JSON.parse(localStorage.getItem('hd_candidates')||'null');
+  if(!stored) return _defaultCandidates.map(c=>({...c}));
+  // Merge: add any new hardcoded candidates not yet in localStorage
+  const ids=new Set(stored.map(c=>c.id));
+  const merged=[...stored,..._defaultCandidates.filter(c=>!ids.has(c.id))];
+  localStorage.setItem('hd_candidates',JSON.stringify(merged));
+  return merged;
+})();
 let feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
 let notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
 const _defaultSchedule=[
