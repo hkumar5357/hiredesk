@@ -119,8 +119,8 @@ const _defaultOpenRoles=[
   {id:'r5',title:'AI Engineer',dept:'Engineering',opened:'2026-05-15',status:'open',priority:'high',jd:'Looking for an AI Engineer with hands-on LLM product experience.\n\nRequired: Python, ML frameworks, LLM APIs\nNice-to-have: MLOps, Agentic AI, Vector databases'},
   {id:'r6',title:'Backend Engineer',dept:'Engineering',opened:'2026-05-20',status:'open',priority:'medium',jd:'Seeking a Backend Engineer with solid database and API design skills.\n\nRequired: Node.js or Python or Go, SQL/NoSQL, REST APIs\nNice-to-have: Kafka, Kubernetes, AWS'},
 ];
-let openRoles=JSON.parse(localStorage.getItem('hd_openRoles')||'null')||_defaultOpenRoles.map(r=>({...r}));
-function saveRoles(){localStorage.setItem('hd_openRoles',JSON.stringify(openRoles));}
+let openRoles=[];
+function saveRoles(){sbSave('open_roles',openRoles);}
 
 const _defaultCandidates=[
   {id:'1',rid:'r1',name:'Sandeep Kumar',yoe:'5 yr',skills:'',li:'https://linkedin.com/in/sandeep-kumar-751b931b',cv:'',email:'sandeepsingh.sre@gmail.com',phone:'+91 95821 19970',cctc:'11.5 LPA',ectc:'14-15 LPA',notice:'Immediate',status:'yellow',stage:'Screening',added:'2026-06-01'},
@@ -175,21 +175,13 @@ const _defaultCandidates=[
   {id:'50',rid:'r1',name:'Aditya Kumar Yadav',yoe:'2.6',skills:'React, Angular, Node.js, .NET, Azure, TypeScript',li:'',cv:'',email:'imadi9415980@gmail.com',phone:'+91 8787208429',cctc:'8.9 LPA',ectc:'12-14 LPA',notice:'45 days',status:'yellow',stage:'Screening',added:'2026-06-09'}
 ];
 
-let candidates=(()=>{
-  const stored=JSON.parse(localStorage.getItem('hd_candidates')||'null');
-  if(!stored) return _defaultCandidates.map(c=>({...c}));
-  // Merge: add any new hardcoded candidates not yet in localStorage
-  const ids=new Set(stored.map(c=>c.id));
-  const merged=[...stored,..._defaultCandidates.filter(c=>!ids.has(c.id))];
-  localStorage.setItem('hd_candidates',JSON.stringify(merged));
-  return merged;
-})();
-let feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-let notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
+let candidates=[];
+let feedback=[];
+let notifications=[];
 const _defaultSchedule=[
   {id:'s1',cid:'31',cname:'Saksham',role:'Backend Engineer',interviewer:'Anjali',date:new Date().toISOString().split('T')[0],stage:'Behavioral Round',status:'Scheduled'},
 ];
-let schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
+let schedule=[];
 
 let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
@@ -282,6 +274,58 @@ const _SB_URL='https://genuplikxwiukxjykwox.supabase.co';
 const _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlbnVwbGlreHdpdWt4anlrd294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODk1MDYsImV4cCI6MjA5NjA2NTUwNn0.dWmOdW1-SCNG50Dwl3VPeRLnTG15Zl9jn-0JyLe8pbY';
 const sb=supabase.createClient(_SB_URL,_SB_ANON);
 
+// ── SUPABASE DATA STORE ───────────────────────────────────────────
+function sbSave(storeKey,val){
+  sb.from('hd_store').upsert({store_key:storeKey,data:val,updated_at:new Date().toISOString()},{onConflict:'store_key'})
+    .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
+}
+async function loadAllData(){
+  const keys=['candidates','open_roles','schedule','feedback','notifications'];
+  const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
+  if(error){console.error('loadAllData:',error.message);return false;}
+  const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
+  // Candidates: merge defaults with stored
+  const stored=map['candidates'];
+  if(stored&&Array.isArray(stored)){
+    const ids=new Set(stored.map(c=>c.id));
+    candidates=[...stored,..._defaultCandidates.filter(c=>!ids.has(c.id))];
+    if(candidates.length>stored.length)sbSave('candidates',candidates);
+  } else {
+    candidates=_defaultCandidates.map(c=>({...c}));
+    sbSave('candidates',candidates);
+  }
+  // Open roles
+  openRoles=map['open_roles']&&Array.isArray(map['open_roles'])?map['open_roles']:null;
+  if(!openRoles){openRoles=_defaultOpenRoles.map(r=>({...r}));sbSave('open_roles',openRoles);}
+  // Schedule
+  schedule=map['schedule']&&Array.isArray(map['schedule'])?map['schedule']:null;
+  if(!schedule){schedule=[..._defaultSchedule];sbSave('schedule',schedule);}
+  // Feedback
+  feedback=map['feedback']&&Array.isArray(map['feedback'])?map['feedback']:[];
+  if(!map['feedback'])sbSave('feedback',feedback);
+  // Notifications
+  notifications=map['notifications']&&Array.isArray(map['notifications'])?map['notifications']:[];
+  if(!map['notifications'])sbSave('notifications',notifications);
+  return true;
+}
+let _rtChannel=null;
+function subscribeRealtime(){
+  if(_rtChannel){sb.removeChannel(_rtChannel);}
+  _rtChannel=sb.channel('hd_store_changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'hd_store'},payload=>{
+      const row=payload.new||{};
+      const k=row.store_key;const d=row.data;
+      if(!k||!Array.isArray(d))return;
+      if(k==='candidates'){const ids=new Set(d.map(c=>c.id));candidates=[...d,..._defaultCandidates.filter(c=>!ids.has(c.id))];}
+      else if(k==='open_roles')openRoles=d;
+      else if(k==='schedule')schedule=d;
+      else if(k==='feedback')feedback=d;
+      else if(k==='notifications'){notifications=d;updateBell();}
+      if(document.getElementById('mc'))renderPage();
+    })
+    .subscribe();
+}
+
 function togglePass(){
   const inp=document.getElementById('li-pass');
   const icon=document.getElementById('eye-icon');
@@ -310,17 +354,15 @@ async function doLogin(){
   S.user={role:meta.role||'viewer',name:meta.name||email.split('@')[0],email:data.user.email};
   localStorage.setItem('hd_u',JSON.stringify(S.user));
   S.page='dashboard';
+  document.getElementById('hd-root').innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#6B7280"><div style="font-size:24px">⏳</div><div style="font-size:14px">Loading HireDesk…</div></div>';
+  await loadAllData();
+  subscribeRealtime();
   renderApp();
 }
-async function logout(){await sb.auth.signOut();S.user=null;localStorage.removeItem('hd_u');renderLogin();}
+async function logout(){if(_rtChannel)sb.removeChannel(_rtChannel);await sb.auth.signOut();S.user=null;localStorage.removeItem('hd_u');renderLogin();}
 
 // ── SHELL ─────────────────────────────────────────────────────────
 function renderApp(){
-  // Always reload persisted data so switching users picks up latest
-  candidates=JSON.parse(localStorage.getItem('hd_candidates')||'null')||_defaultCandidates.map(c=>({...c}));
-  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
-  schedule=JSON.parse(localStorage.getItem('hd_schedule')||JSON.stringify(_defaultSchedule));
   const isAdmin=S.user?.role==='admin';
   const navs=[
     {id:'dashboard',label:'Dashboard',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
@@ -492,7 +534,7 @@ function renderDash(){
   </div>`;
 }
 
-function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);localStorage.setItem('hd_schedule',JSON.stringify(schedule));renderDash();toast('Marked done');}
+function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);sbSave('schedule',schedule);renderDash();toast('Marked done');}
 
 function openCandFromSchedule(cid){
   const c=candOf(cid);if(!c)return;
@@ -551,7 +593,7 @@ function saveSchedule(cid){
   // Remove existing non-done entry for this candidate
   schedule=schedule.filter(s=>!(s.cid===cid&&s.status!=='Done'));
   schedule.push({id:'s'+Date.now(),cid,cname:c.name,role:role?.title||'',interviewer,date,time,round,status:'Scheduled'});
-  localStorage.setItem('hd_schedule',JSON.stringify(schedule));
+  sbSave('schedule',schedule);
   closeModal();
   toast('Interview scheduled for '+c.name);
   if(S.page==='dashboard')renderDash();
@@ -739,13 +781,10 @@ function selectCand(cid){S.cid=cid;S.view='profile';renderApps();}
 function renderProfile(){
   const c=candOf(S.cid);if(!c)return;
   const sb=document.getElementById('topbar-save');if(sb)sb.style.display='block';
-  // Reload fresh data
-  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   // Auto-clear notifications for this candidate
-  notifications.filter(n=>n.cid===c.id&&!n.read).forEach(n=>n.read=true);
-  localStorage.setItem('hd_notifications',JSON.stringify(notifications));
-  updateBell();
+  const hadUnread=notifications.some(n=>n.cid===c.id&&!n.read);
+  notifications=notifications.map(n=>n.cid===c.id?{...n,read:true}:n);
+  if(hadUnread){sbSave('notifications',notifications);updateBell();}
   const role=roleOf(c.rid);
   const cfb=feedback.filter(f=>f.cid===c.id);
   document.getElementById('mc').innerHTML=`
@@ -829,7 +868,7 @@ function saveProfile(){
     const val=el.value;
     candidates=candidates.map(c=>c.id===cid?{...c,[field]:val}:c);
   });
-  localStorage.setItem('hd_candidates',JSON.stringify(candidates));
+  sbSave('candidates',candidates);
   // Flash the button green briefly
   const btn=document.querySelector('#topbar-save button');
   if(btn){btn.style.background='#16A34A';btn.textContent='✓ Saved';setTimeout(()=>{btn.style.background='';btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';},1500);}
@@ -837,7 +876,7 @@ function saveProfile(){
 }
 function updCand(id,field,val){
   candidates=candidates.map(c=>c.id===id?{...c,[field]:val}:c);
-  localStorage.setItem('hd_candidates',JSON.stringify(candidates));
+  sbSave('candidates',candidates);
   if(field==='status'||field==='stage')renderProfile();
 }
 function submitFB(cid,stage){
@@ -845,18 +884,14 @@ function submitFB(cid,stage){
   const text=document.getElementById(key)?.value?.trim();
   if(!text){toast('Enter feedback','err');return;}
 
-  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
-  feedback=fbList;
+  feedback=[...feedback,{id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]}];
+  sbSave('feedback',feedback);
 
   if(S.user?.role==='viewer'){
     const c=candidates.find(x=>x.id===cid);
     const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
-    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
-    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
-    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
-    notifications=notifList;
+    notifications=[{id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()},...notifications];
+    sbSave('notifications',notifications);
     toast('Feedback submitted — admin notified ✓');
   } else {
     toast('Feedback saved');
@@ -868,25 +903,16 @@ function submitFB(cid,stage){
 // ── BELL / NOTIFICATIONS ──────────────────────────────────────────
 function updateBell(){
   if(S.user?.role!=='admin')return;
-  // Always read fresh from localStorage — never trust in-memory array alone
-  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   const unread=notifications.filter(n=>!n.read).length;
   const badge=document.getElementById('bell-badge');
   if(badge){badge.style.display=unread>0?'flex':'none';badge.textContent=unread>9?'9+':String(unread);}
 }
-// Cross-tab sync: reload data when another tab makes changes
-window.addEventListener('storage',e=>{
-  if(e.key==='hd_notifications')updateBell();
-  if(e.key==='hd_candidates'&&e.newValue)candidates=JSON.parse(e.newValue);
-  if(e.key==='hd_schedule'&&e.newValue)schedule=JSON.parse(e.newValue);
-});
+// (Realtime sync is handled by Supabase subscription in subscribeRealtime())
 function toggleBell(e){
   e?.stopPropagation();
   const dd=document.getElementById('bell-dd');
   if(!dd)return;
   if(dd.style.display==='none'){
-    // Reload fresh before opening dropdown
-    notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
     const unread=notifications.filter(n=>!n.read);
     dd.innerHTML=`
       <div class="bell-dd-head">
@@ -908,7 +934,6 @@ function toggleBell(e){
 }
 function closeBellOnOut(){const dd=document.getElementById('bell-dd');if(dd)dd.style.display='none';}
 function openNotif(nid){
-  notifications=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
   const n=notifications.find(x=>x.id===nid);
   if(!n)return;
   document.getElementById('bell-dd').style.display='none';
@@ -919,14 +944,13 @@ function openNotif(nid){
   renderPage();
   setTimeout(()=>{const el=document.getElementById('fb-section');if(el)el.scrollIntoView({behavior:'smooth'});},100);
 }
-function clearAllNotif(){notifications.forEach(n=>n.read=true);localStorage.setItem('hd_notifications',JSON.stringify(notifications));updateBell();document.getElementById('bell-dd').style.display='none';}
+function clearAllNotif(){notifications=notifications.map(n=>({...n,read:true}));sbSave('notifications',notifications);updateBell();document.getElementById('bell-dd').style.display='none';}
 
 // ── PIPELINE ──────────────────────────────────────────────────────
 function renderPipeline(){
   hideSaveBtn();
   if(S.pipCid) return renderPipelineProfile();
   if(S.pipRid) return renderPipelineCands();
-  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const active=candidates.filter(c=>['yellow','blue'].includes(c.status));
 
   // Build role cards
@@ -960,7 +984,6 @@ function renderPipeline(){
 }
 
 function renderPipelineCands(){
-  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const isAdmin=S.user?.role==='admin';
   const role=roleOf(S.pipRid);
   const cands=candidates.filter(c=>c.rid===S.pipRid&&['yellow','blue'].includes(c.status)).slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -1010,13 +1033,12 @@ function renderPipelineCands(){
   </tbody></table></div>`:`<div class="empty card">No active candidates for this role</div>`}`;
 }
 
-function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);localStorage.setItem('hd_candidates',JSON.stringify(candidates));renderPipelineCands();toast('Stage updated');}
-function setPipStatus(cid,status){candidates=candidates.map(c=>c.id===cid?{...c,status}:c);localStorage.setItem('hd_candidates',JSON.stringify(candidates));renderPipelineCands();toast('Status updated');}
+function setPipStage(cid,stage){candidates=candidates.map(c=>c.id===cid?{...c,stage}:c);sbSave('candidates',candidates);renderPipelineCands();toast('Stage updated');}
+function setPipStatus(cid,status){candidates=candidates.map(c=>c.id===cid?{...c,status}:c);sbSave('candidates',candidates);renderPipelineCands();toast('Status updated');}
 function openPipProfile(cid){S.pipCid=cid;renderPipeline();}
 function closePipProfile(){S.pipCid=null;renderPipeline();}
 
 function renderPipelineProfile(){
-  feedback=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
   const c=candidates.find(x=>x.id===S.pipCid);if(!c){closePipProfile();return;}
   const isAdmin=S.user?.role==='admin';
   const role=roleOf(c.rid);
@@ -1102,17 +1124,13 @@ function showFBModalStage(cid,stage){
 function submitFBPip(cid,stage){
   const text=document.getElementById('fb-tx')?.value?.trim();
   if(!text){toast('Enter feedback','err');return;}
-  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
-  feedback=fbList;
+  feedback=[...feedback,{id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]}];
+  sbSave('feedback',feedback);
   if(S.user?.role==='viewer'){
     const c=candidates.find(x=>x.id===cid);
     const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
-    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
-    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
-    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
-    notifications=notifList;
+    notifications=[{id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()},...notifications];
+    sbSave('notifications',notifications);
     toast('Feedback submitted — admin notified ✓');
   } else {
     toast('Feedback saved');
@@ -1145,7 +1163,7 @@ function submitAddCand(){
   const name=document.getElementById('ac-n')?.value.trim();
   if(!name){toast('Name required','err');return;}
   candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Screening',added:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_candidates',JSON.stringify(candidates));
+  sbSave('candidates',candidates);
   closeModal();toast(name+' added to pipeline');
   renderPage();
 }
@@ -1170,19 +1188,15 @@ function submitFBModal(cid){
   if(!text){toast('Enter feedback','err');return;}
 
   // Save feedback
-  const fbList=JSON.parse(localStorage.getItem('hd_feedback')||'[]');
-  fbList.push({id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]});
-  localStorage.setItem('hd_feedback',JSON.stringify(fbList));
-  feedback=fbList;
+  feedback=[...feedback,{id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]}];
+  sbSave('feedback',feedback);
 
   // Create notification for admin (viewer only)
   if(S.user?.role==='viewer'){
     const c=candidates.find(x=>x.id===cid);
     const roleName=openRoles.find(r=>r.id===c?.rid)?.title||'';
-    const notifList=JSON.parse(localStorage.getItem('hd_notifications')||'[]');
-    notifList.unshift({id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()});
-    localStorage.setItem('hd_notifications',JSON.stringify(notifList));
-    notifications=notifList;
+    notifications=[{id:'n'+Date.now(),cid,cname:c?.name||'',role:roleName,reviewer:S.user.name,stage,read:false,at:new Date().toISOString()},...notifications];
+    sbSave('notifications',notifications);
     toast('Feedback submitted — admin notified ✓');
   } else {
     toast('Feedback submitted');
@@ -1195,11 +1209,14 @@ function submitFBModal(cid){
 
 
 // ── INIT ──────────────────────────────────────────────────────────
-sb.auth.getSession().then(({data:{session}})=>{
+sb.auth.getSession().then(async ({data:{session}})=>{
   if(session){
     const meta=session.user.user_metadata||{};
     S.user={role:meta.role||'viewer',name:meta.name||session.user.email.split('@')[0],email:session.user.email};
     localStorage.setItem('hd_u',JSON.stringify(S.user));
+    document.getElementById('hd-root').innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#6B7280"><div style="font-size:24px">⏳</div><div style="font-size:14px">Loading HireDesk…</div></div>';
+    await loadAllData();
+    subscribeRealtime();
     renderApp();
   }else{
     S.user=null;localStorage.removeItem('hd_u');renderLogin();
