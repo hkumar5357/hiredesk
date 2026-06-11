@@ -1317,19 +1317,69 @@ function renderProfile(){
         ${c.skills?`<div style="margin-top:14px"><label class="label">Skills / Tags</label><div>${c.skills.split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div></div>`:''}
       </div>
       <div class="card" id="fb-section">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px">Round Feedback</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">Interview Feedback</div>
         ${FB_STAGES.map(stage=>{
           const sfb=cfb.filter(f=>f.stage===stage);
+          const latestScore=sfb.filter(f=>f.score!=null).slice(-1)[0]?.score;
           return`<div class="fb-round">
-            <div style="margin-bottom:8px">${stBadge(stage)}</div>
-            ${sfb.map(f=>`<div class="fb-submitted"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">${f.reviewer} · ${fmtDate(f.on)}</div>${f.text}</div>`).join('')}
-            <textarea class="input" id="fbt-${c.id}-${stage.replace(/ /g,'_')}" rows="2" placeholder="Add feedback for ${stage}…" style="resize:vertical;font-size:12px;margin-bottom:6px"></textarea>
-            <button class="btn btn-secondary btn-sm" onclick="submitFB('${c.id}','${stage}')">Submit</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              ${stBadge(stage)}
+              ${latestScore!=null?`<span style="font-size:12px;font-weight:700;color:#4F46E5;background:#EEF2FF;padding:3px 10px;border-radius:20px">${latestScore}/25</span>`:''}
+            </div>
+            ${sfb.map(f=>`<div class="fb-submitted">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-size:11px;color:var(--muted)">${f.reviewer} · ${fmtDate(f.on)}</span>
+                ${f.score!=null?`<span style="font-size:11px;font-weight:700;color:#4F46E5">${f.score}/25</span>`:''}
+              </div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6">${f.text}</div>
+            </div>`).join('')}
+            <textarea class="input" id="fbt-${c.id}-${stage.replace(/ /g,'_')}" rows="2" placeholder="Add feedback for ${stage}…" style="resize:vertical;font-size:12px;margin-bottom:8px"></textarea>
+            <div style="display:flex;align-items:center;gap:8px">
+              <select class="input" id="fbsc-${c.id}-${stage.replace(/ /g,'_')}" style="width:130px;font-size:12px">
+                <option value="">Score (0–25)</option>
+                ${Array.from({length:26},(_,i)=>`<option value="${i}">${i} / 25</option>`).join('')}
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="submitFB('${c.id}','${stage}')">Submit</button>
+            </div>
           </div>`;
         }).join('')}
       </div>
     </div>
     <div>
+      ${(()=>{
+        const scored=FB_STAGES.map(st=>{const stFB=cfb.filter(f=>f.stage===st&&f.score!=null);if(!stFB.length)return null;return{stage:st,score:stFB[stFB.length-1].score};}).filter(Boolean);
+        if(!scored.length)return'';
+        const total=scored.reduce((a,s)=>a+s.score,0);
+        const max=scored.length*25;
+        const pct=Math.round(total/max*100);
+        const hired=pct>=60;
+        return`<div class="card" style="margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Interview Score</div>
+          ${scored.map(s=>`
+            <div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-size:11px;color:var(--muted)">${s.stage}</span>
+                <span style="font-size:12px;font-weight:700">${s.score}/25</span>
+              </div>
+              <div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden">
+                <div style="height:100%;border-radius:3px;background:${s.score>=15?'#16A34A':s.score>=10?'#CA8A04':'#DC2626'};width:${Math.round(s.score/25*100)}%"></div>
+              </div>
+            </div>`).join('')}
+          <div style="height:1px;background:var(--border);margin:12px 0"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600">Total</span>
+            <span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${total}/${max}</span>
+          </div>
+          <div style="height:8px;border-radius:5px;background:#F3F4F6;overflow:hidden;margin-bottom:10px">
+            <div style="height:100%;border-radius:5px;background:${hired?'#16A34A':'#DC2626'};width:${pct}%;transition:width .5s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:18px;font-weight:900;color:${hired?'#16A34A':'#DC2626'}">${pct}%</span>
+            <span class="badge" style="background:${hired?'#F0FDF4':'#FEF2F2'};color:${hired?'#16A34A':'#DC2626'};font-size:12px;padding:5px 12px">${hired?'✅ Hire':'❌ Do Not Hire'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted)">Min. 60% required · ${FB_STAGES.length-scored.length} round${FB_STAGES.length-scored.length!==1?'s':''} pending</div>
+        </div>`;
+      })()}
       <div class="card" style="margin-bottom:14px">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px">Quick Actions</div>
         <div style="display:flex;flex-direction:column;gap:8px">
@@ -1373,10 +1423,13 @@ function updCand(id,field,val){
 }
 function submitFB(cid,stage){
   const key=`fbt-${cid}-${stage.replace(/ /g,'_')}`;
+  const scoreKey=`fbsc-${cid}-${stage.replace(/ /g,'_')}`;
   const text=document.getElementById(key)?.value?.trim();
+  const scoreVal=document.getElementById(scoreKey)?.value;
+  const score=scoreVal!==''&&scoreVal!=null?parseInt(scoreVal):null;
   if(!text){toast('Enter feedback','err');return;}
 
-  feedback=[...feedback,{id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,on:new Date().toISOString().split('T')[0]}];
+  feedback=[...feedback,{id:'f'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',text,score,on:new Date().toISOString().split('T')[0]}];
   sbSave('feedback',feedback);
 
   if(S.user?.role==='viewer'){
