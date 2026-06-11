@@ -410,7 +410,7 @@ function renderApp(){
     {id:'openRoles',label:'Open Roles',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
     {id:'applications',label:'Applications',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
     {id:'pipeline',label:'Pipeline',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'},
-    {id:'onboarded',label:'Onboarded',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',badge:'New'},
+    {id:'onboarded',label:'Selected Candidates',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',badge:'New'},
   ].filter(n=>!n.adminOnly||isAdmin);
 
   document.getElementById('hd-root').innerHTML=`
@@ -503,7 +503,7 @@ function renderDash(){
   const stats=[
     {l:'Current Hiring Status',v:candidates.length,i:'📊',c:'#7C3AED',key:'hiringStatus'},
     {l:'Interview Stage',v:candidates.filter(c=>['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion'].includes(c.stage)&&c.status!=='red').length,i:'🎯',c:'#0EA5E9',key:'interviewStage'},
-    {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
+    {l:'Selected Candidates',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
   ];
 
   function schedCard(s){
