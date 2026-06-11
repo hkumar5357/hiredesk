@@ -211,7 +211,7 @@ const _onboardedHires=[
 ];
 let onboardedHires=[];
 
-let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',dashCard:null,dashRoleFilter:'all',dashStageFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',dashCard:null,dashRoleFilter:'all',dashStageFilter:'all',dashStatusFilter:'all',dashRoundFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 let _dashChart=null;
 let _dashClickedLabel=null;
 
@@ -501,10 +501,12 @@ function renderDash(){
   const todaySched=schedule.filter(s=>s.date===today).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const tomorrowSched=schedule.filter(s=>s.date===tomorrow).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const stats=[
-{l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB',key:'pipeline'},
+    {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB',key:'pipeline'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04',key:'inProcess'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A',key:'selected'},
     {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
+    {l:'Current Hiring Status',v:candidates.length,i:'📊',c:'#7C3AED',key:'hiringStatus'},
+    {l:'Interview Stage',v:candidates.filter(c=>['Behavioral Round','Discussion Round','Technical Round','Final Discussion'].includes(c.stage)&&c.status!=='red').length,i:'🎯',c:'#0EA5E9',key:'interviewStage'},
   ];
 
   function schedCard(s){
@@ -552,6 +554,14 @@ function renderDash(){
         ${S.dashCard==='onboarded'?`<select class="input" id="dash-stage-filter" style="width:148px;font-size:12px" onchange="changeDashStageFilter(this.value)">
           <option value="all">All Stages</option>
           ${['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'].map(st=>`<option value="${st}"${S.dashStageFilter===st?' selected':''}>${st}</option>`).join('')}
+        </select>`:''}
+        ${S.dashCard==='hiringStatus'?`<select class="input" id="dash-status-filter" style="width:148px;font-size:12px" onchange="changeDashStatusFilter(this.value)">
+          <option value="all">All Statuses</option>
+          ${['Rejected','In Pipeline','In Process','Selected'].map(st=>`<option value="${st}"${S.dashStatusFilter===st?' selected':''}>${st}</option>`).join('')}
+        </select>`:''}
+        ${S.dashCard==='interviewStage'?`<select class="input" id="dash-round-filter" style="width:178px;font-size:12px" onchange="changeDashRoundFilter(this.value)">
+          <option value="all">All Rounds</option>
+          ${['Behavioral Round','Discussion Round','Technical Round','Final Discussion / Offer Roll Out'].map(r=>`<option value="${r}"${S.dashRoundFilter===r?' selected':''}>${r}</option>`).join('')}
         </select>`:''}
         <select class="input" id="dash-role-filter" style="width:148px;font-size:12px" onchange="changeDashFilter(this.value)">
           <option value="all">All Roles</option>
@@ -624,6 +634,8 @@ function selectDashCard(key){
   S.dashCard=(S.dashCard===key)?null:key;
   S.dashRoleFilter='all';
   S.dashStageFilter='all';
+  S.dashStatusFilter='all';
+  S.dashRoundFilter='all';
   _dashClickedLabel=null;
   renderDash();
 }
@@ -637,6 +649,20 @@ function changeDashFilter(val){
 
 function changeDashStageFilter(val){
   S.dashStageFilter=val;
+  _dashClickedLabel=null;
+  if(_dashChart){_dashChart.destroy();_dashChart=null;}
+  setTimeout(initDashChart,60);
+}
+
+function changeDashStatusFilter(val){
+  S.dashStatusFilter=val;
+  _dashClickedLabel=null;
+  if(_dashChart){_dashChart.destroy();_dashChart=null;}
+  setTimeout(initDashChart,60);
+}
+
+function changeDashRoundFilter(val){
+  S.dashRoundFilter=val;
   _dashClickedLabel=null;
   if(_dashChart){_dashChart.destroy();_dashChart=null;}
   setTimeout(initDashChart,60);
@@ -686,6 +712,77 @@ function getDashData(){
     }
 
     return{title,labels,data,colors,allRoles,activeStages,byRow,chartType:'bar',names,isOnboarded:true};
+  }
+
+  // ── Current Hiring Status card ──
+  if(key==='hiringStatus'){
+    const _STATUS_DEFS=[
+      {l:'In Pipeline',fn:c=>!['red','green','blue'].includes(c.status),c:'#2563EB'},
+      {l:'In Process',fn:c=>c.status==='blue',c:'#CA8A04'},
+      {l:'Selected',fn:c=>c.stage==='Offer Letter Rolled Out'||c.status==='green',c:'#16A34A'},
+      {l:'Rejected',fn:c=>c.status==='red',c:'#DC2626'},
+    ];
+    const allRoles=[...new Set(candidates.map(c=>roleOf(c)))].sort();
+    let subset=candidates;
+    if(S.dashRoleFilter!=='all') subset=subset.filter(c=>roleOf(c)===S.dashRoleFilter);
+    const byStatus=S.dashStatusFilter==='all';
+    let labels,data,colors,byRow,title;
+    if(byStatus){
+      const defs=_STATUS_DEFS.filter(d=>subset.some(d.fn));
+      labels=defs.map(d=>d.l);
+      data=defs.map(d=>subset.filter(d.fn).length);
+      colors=defs.map(d=>d.c);
+      byRow=defs.map(d=>({role:d.l,count:subset.filter(d.fn).length,color:d.c}));
+      title=S.dashRoleFilter==='all'?'Current Hiring Status — All Roles':`${S.dashRoleFilter} — Hiring Status`;
+    } else {
+      const def=_STATUS_DEFS.find(d=>d.l===S.dashStatusFilter)||_STATUS_DEFS[0];
+      const filtered=subset.filter(def.fn);
+      const rMap={};filtered.forEach(c=>{const r=roleOf(c);rMap[r]=(rMap[r]||0)+1;});
+      const rLabels=Object.keys(rMap).sort((a,b)=>rMap[b]-rMap[a]);
+      labels=rLabels;
+      data=rLabels.map(r=>rMap[r]);
+      colors=rLabels.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
+      byRow=rLabels.map((r,i)=>({role:r,count:rMap[r],color:colors[i]}));
+      title=`${S.dashStatusFilter} — by Role`;
+    }
+    return{title,labels,data,colors,allRoles,byRow,chartType:'bar',names:[],isOnboarded:false};
+  }
+
+  // ── Interview Stage card ──
+  if(key==='interviewStage'){
+    const _ROUND_DEFS=[
+      {l:'Behavioral Round',stages:['Behavioral Round'],c:'#7C3AED'},
+      {l:'Discussion Round',stages:['Discussion Round'],c:'#0EA5E9'},
+      {l:'Technical Round',stages:['Technical Round'],c:'#F59E0B'},
+      {l:'Final Discussion / Offer Roll Out',stages:['Final Discussion','Offer Letter Rolled Out'],c:'#16A34A'},
+    ];
+    const activePool=candidates.filter(c=>c.status!=='red');
+    const allRoles=[...new Set(activePool.map(c=>roleOf(c)))].sort();
+    let subset=activePool;
+    if(S.dashRoleFilter!=='all') subset=subset.filter(c=>roleOf(c)===S.dashRoleFilter);
+    const byRound=S.dashRoundFilter==='all';
+    let labels,data,colors,byRow,title;
+    if(byRound){
+      const defs=_ROUND_DEFS.filter(d=>subset.some(c=>d.stages.includes(c.stage)));
+      labels=defs.map(d=>d.l);
+      data=defs.map(d=>subset.filter(c=>d.stages.includes(c.stage)).length);
+      colors=defs.map(d=>d.c);
+      byRow=defs.map(d=>({role:d.l,count:subset.filter(c=>d.stages.includes(c.stage)).length,color:d.c}));
+      title=S.dashRoleFilter==='all'?'Interview Stage — All Roles':`${S.dashRoleFilter} — Interview Stages`;
+    } else {
+      // Map display label back to actual stages
+      const roundLabel=S.dashRoundFilter;
+      const def=_ROUND_DEFS.find(d=>d.l===roundLabel)||_ROUND_DEFS[0];
+      const filtered=subset.filter(c=>def.stages.includes(c.stage));
+      const rMap={};filtered.forEach(c=>{const r=roleOf(c);rMap[r]=(rMap[r]||0)+1;});
+      const rLabels=Object.keys(rMap).sort((a,b)=>rMap[b]-rMap[a]);
+      labels=rLabels;
+      data=rLabels.map(r=>rMap[r]);
+      colors=rLabels.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
+      byRow=rLabels.map((r,i)=>({role:r,count:rMap[r],color:colors[i]}));
+      title=`${roundLabel} — by Role`;
+    }
+    return{title,labels,data,colors,allRoles,byRow,chartType:'bar',names:[],isOnboarded:false};
   }
 
   // ── Non-onboarded cards ──
@@ -774,12 +871,30 @@ function initDashChart(){
             return;
           }
           const clicked=labels[items[0].index];
-          const clickedColor=colors[items[0].index];
           if(isOnboarded){
             // toggle names panel
+            const clickedColor=colors[items[0].index];
             _dashClickedLabel=_dashClickedLabel===clicked?null:clicked;
             const d2=getDashData();
             renderDashNames(d2.names,_dashClickedLabel,clickedColor);
+          } else if(S.dashCard==='hiringStatus'){
+            // clicking a status bar → filter by status; if already filtered → drill by role
+            if(S.dashStatusFilter==='all'){
+              S.dashStatusFilter=S.dashStatusFilter===clicked?'all':clicked;
+            } else {
+              S.dashRoleFilter=S.dashRoleFilter===clicked?'all':clicked;
+            }
+            if(_dashChart){_dashChart.destroy();_dashChart=null;}
+            setTimeout(initDashChart,60);
+          } else if(S.dashCard==='interviewStage'){
+            // clicking a round bar → filter by round; if already filtered → drill by role
+            if(S.dashRoundFilter==='all'){
+              S.dashRoundFilter=S.dashRoundFilter===clicked?'all':clicked;
+            } else {
+              S.dashRoleFilter=S.dashRoleFilter===clicked?'all':clicked;
+            }
+            if(_dashChart){_dashChart.destroy();_dashChart=null;}
+            setTimeout(initDashChart,60);
           } else {
             // drill-down by role filter
             S.dashRoleFilter=S.dashRoleFilter===clicked?'all':clicked;
@@ -795,11 +910,16 @@ function initDashChart(){
   const bdEl=document.getElementById('dash-breakdown');
   if(!bdEl)return;
   const bdTotal=byRow.reduce((a,r)=>a+r.count,0)||1;
+  const _bdOnclick=r=>{
+    if(isOnboarded) return S.dashStageFilter==='all'?`changeDashStageFilter(${JSON.stringify(S.dashStageFilter===r.role?'all':r.role)})`:`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`;
+    if(S.dashCard==='hiringStatus') return S.dashStatusFilter==='all'?`changeDashStatusFilter(${JSON.stringify(S.dashStatusFilter===r.role?'all':r.role)})`:`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`;
+    if(S.dashCard==='interviewStage') return S.dashRoundFilter==='all'?`changeDashRoundFilter(${JSON.stringify(S.dashRoundFilter===r.role?'all':r.role)})`:`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`;
+    return `changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`;
+  };
+  const _bdActive=r=>S.dashRoleFilter===r.role||S.dashStageFilter===r.role||S.dashStatusFilter===r.role||S.dashRoundFilter===r.role||_dashClickedLabel===r.role;
   bdEl.innerHTML=byRow.map((r,i)=>`
-    <div onclick="${isOnboarded
-      ?(S.dashStageFilter==='all'?`changeDashStageFilter(${JSON.stringify(S.dashStageFilter===r.role?'all':r.role)})`:`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`)
-      :`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`}"
-      style="margin-bottom:7px;padding:6px 8px;border-radius:7px;cursor:pointer;background:${(S.dashRoleFilter===r.role||S.dashStageFilter===r.role||_dashClickedLabel===r.role)?r.color+'18':'transparent'};transition:background .12s">
+    <div onclick="${_bdOnclick(r)}"
+      style="margin-bottom:7px;padding:6px 8px;border-radius:7px;cursor:pointer;background:${_bdActive(r)?r.color+'18':'transparent'};transition:background .12s">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#374151">
           <span style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></span>
