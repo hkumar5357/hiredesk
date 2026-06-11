@@ -501,8 +501,6 @@ function renderDash(){
   const todaySched=schedule.filter(s=>s.date===today).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const tomorrowSched=schedule.filter(s=>s.date===tomorrow).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const stats=[
-    {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB',key:'pipeline'},
-    {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04',key:'inProcess'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A',key:'selected'},
     {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
     {l:'Current Hiring Status',v:candidates.length,i:'📊',c:'#7C3AED',key:'hiringStatus'},
