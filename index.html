@@ -211,8 +211,9 @@ const _onboardedHires=[
 ];
 let onboardedHires=[];
 
-let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',dashCard:null,dashRoleFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',dashCard:null,dashRoleFilter:'all',dashStageFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 let _dashChart=null;
+let _dashClickedLabel=null;
 
 // ── UTILS ─────────────────────────────────────────────────────────
 const ini=n=>n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
@@ -504,7 +505,7 @@ function renderDash(){
     {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB',key:'pipeline'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04',key:'inProcess'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A',key:'selected'},
-    {l:'Successfully Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
+    {l:'Onboarded',v:onboardedHires.length,i:'✅',c:'#059669',key:'onboarded'},
   ];
 
   function schedCard(s){
@@ -543,13 +544,17 @@ function renderDash(){
 
   ${S.dashCard?`
   <div class="card" style="margin-bottom:24px;padding:22px;animation:fadeInDown .2s ease">
-    <div class="flex-between" style="margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px;flex-wrap:wrap">
       <div>
         <div style="font-size:15px;font-weight:800" id="dash-chart-title">Loading…</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">Click any bar to filter · Click again to reset</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${S.dashCard==='onboarded'?'Click a bar to see names · Click again to hide':'Click any bar to drill down · Click again to reset'}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <select class="input" id="dash-role-filter" style="width:165px;font-size:12px" onchange="changeDashFilter(this.value)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        ${S.dashCard==='onboarded'?`<select class="input" id="dash-stage-filter" style="width:148px;font-size:12px" onchange="changeDashStageFilter(this.value)">
+          <option value="all">All Stages</option>
+          ${['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'].map(st=>`<option value="${st}"${S.dashStageFilter===st?' selected':''}>${st}</option>`).join('')}
+        </select>`:''}
+        <select class="input" id="dash-role-filter" style="width:148px;font-size:12px" onchange="changeDashFilter(this.value)">
           <option value="all">All Roles</option>
         </select>
         <button onclick="selectDashCard('${S.dashCard}')" class="btn btn-secondary btn-sm" style="white-space:nowrap">✕ Close</button>
@@ -564,6 +569,7 @@ function renderDash(){
         <div id="dash-breakdown"></div>
       </div>
     </div>
+    <div id="dash-names-panel" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)"></div>
   </div>`:''}
 
   ${(todaySched.length||tomorrowSched.length)?`
@@ -618,34 +624,73 @@ function selectDashCard(key){
   if(_dashChart){_dashChart.destroy();_dashChart=null;}
   S.dashCard=(S.dashCard===key)?null:key;
   S.dashRoleFilter='all';
+  S.dashStageFilter='all';
+  _dashClickedLabel=null;
   renderDash();
 }
 
 function changeDashFilter(val){
   S.dashRoleFilter=val;
+  _dashClickedLabel=null;
   if(_dashChart){_dashChart.destroy();_dashChart=null;}
   setTimeout(initDashChart,60);
 }
 
+function changeDashStageFilter(val){
+  S.dashStageFilter=val;
+  _dashClickedLabel=null;
+  if(_dashChart){_dashChart.destroy();_dashChart=null;}
+  setTimeout(initDashChart,60);
+}
+
+const _OB_STAGE_COLS={'Joined':'#16A34A','Early Exit':'#CA8A04','Dropped':'#DC2626',"Didn't Accept":'#6B7280','Offer Roll Out':'#2563EB'};
+const _OB_ALL_STAGES=['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'];
+
 function getDashData(){
   const roleOf=c=>openRoles.find(r=>r.id===c.rid)?.title||'Other';
   const key=S.dashCard;
-  let subset,title,chartType='bar';
 
   if(key==='onboarded'){
     const allRoles=[...new Set(onboardedHires.map(h=>h.role))].sort();
-    const byRole=allRoles.map(r=>({role:r,count:onboardedHires.filter(h=>h.role===r).length})).sort((a,b)=>b.count-a.count);
-    const stageBreak=['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'].map(st=>({role:st,count:onboardedHires.filter(h=>h.stage===st).length})).filter(x=>x.count>0);
-    if(S.dashRoleFilter==='all'){
-      return{title:'Successfully Onboarded — by Role',labels:byRole.map(r=>r.role),data:byRole.map(r=>r.count),allRoles,byRole,chartType:'bar'};
+    const activeStages=_OB_ALL_STAGES.filter(s=>onboardedHires.some(h=>h.stage===s));
+
+    // apply filters
+    let subset=onboardedHires;
+    if(S.dashRoleFilter!=='all') subset=subset.filter(h=>h.role===S.dashRoleFilter);
+    if(S.dashStageFilter!=='all') subset=subset.filter(h=>h.stage===S.dashStageFilter);
+
+    // When no stage filter → chart by stage; when stage filter → chart by role
+    const byStage=S.dashStageFilter==='all';
+    let labels,data,colors,byRow,title;
+
+    if(byStage){
+      labels=activeStages;
+      data=activeStages.map(st=>subset.filter(h=>h.stage===st).length);
+      colors=activeStages.map(st=>_OB_STAGE_COLS[st]||'#6B7280');
+      byRow=activeStages.map((st,i)=>({role:st,count:subset.filter(h=>h.stage===st).length,color:colors[i]}));
+      title=S.dashRoleFilter==='all'?'Onboarded — by Stage':`${S.dashRoleFilter} — by Stage`;
     } else {
-      const filtered=onboardedHires.filter(h=>h.role===S.dashRoleFilter);
-      const stg=['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'];
-      const stgData=stg.map(s=>filtered.filter(h=>h.stage===s).length);
-      return{title:`${S.dashRoleFilter} — Stage Breakdown`,labels:stg,data:stgData,allRoles,byRole:stageBreak,chartType:'doughnut'};
+      const filteredRoles=allRoles.filter(r=>subset.some(h=>h.role===r));
+      labels=filteredRoles;
+      data=filteredRoles.map(r=>subset.filter(h=>h.role===r).length);
+      colors=filteredRoles.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
+      byRow=filteredRoles.map((r,i)=>({role:r,count:subset.filter(h=>h.role===r).length,color:colors[i]}));
+      title=`${S.dashStageFilter} — by Role`;
     }
+
+    // Names for clicked label
+    let names=[];
+    if(_dashClickedLabel){
+      names=byStage
+        ? subset.filter(h=>h.stage===_dashClickedLabel)
+        : subset.filter(h=>h.role===_dashClickedLabel);
+    }
+
+    return{title,labels,data,colors,allRoles,activeStages,byRow,chartType:'bar',names,isOnboarded:true};
   }
 
+  // ── Non-onboarded cards ──
+  let subset,title;
   if(key==='total'){subset=candidates;title='Total Candidates';}
   else if(key==='pipeline'){subset=candidates.filter(c=>!['red','green'].includes(c.status));title='Active Pipeline';}
   else if(key==='inProcess'){subset=candidates.filter(c=>c.status==='blue');title='In Process';}
@@ -653,16 +698,18 @@ function getDashData(){
 
   const map={};subset.forEach(c=>{const r=roleOf(c);map[r]=(map[r]||0)+1;});
   const allRoles=Object.keys(map).sort((a,b)=>map[b]-map[a]);
-  const byRole=allRoles.map(r=>({role:r,count:map[r]}));
+  const byRole=allRoles.map((r,i)=>({role:r,count:map[r],color:_CHART_PALETTE[i%_CHART_PALETTE.length]}));
+  const colors=allRoles.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
 
-  if(S.dashRoleFilter!=='all'&&S.dashRoleFilter!==null){
+  if(S.dashRoleFilter!=='all'){
     const filt=subset.filter(c=>roleOf(c)===S.dashRoleFilter);
     const stMap={};filt.forEach(c=>{stMap[c.stage]=(stMap[c.stage]||0)+1;});
     const stLabels=Object.keys(stMap);
-    return{title:`${S.dashRoleFilter} — Stage Breakdown`,labels:stLabels,data:stLabels.map(s=>stMap[s]),allRoles,byRole,chartType:'doughnut'};
+    const stColors=stLabels.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
+    return{title:`${S.dashRoleFilter} — Stage Breakdown`,labels:stLabels,data:stLabels.map(s=>stMap[s]),colors:stColors,allRoles,byRow:byRole,chartType:'doughnut',names:[],isOnboarded:false};
   }
 
-  return{title:`${title} — by Role`,labels:allRoles,data:allRoles.map(r=>map[r]),allRoles,byRole,chartType:'bar'};
+  return{title:`${title} — by Role`,labels:allRoles,data:allRoles.map(r=>map[r]),colors,allRoles,byRow:byRole,chartType:'bar',names:[],isOnboarded:false};
 }
 
 function initDashChart(){
@@ -670,27 +717,21 @@ function initDashChart(){
   const canvas=document.getElementById('dash-chart');if(!canvas)return;
   if(_dashChart){_dashChart.destroy();_dashChart=null;}
 
-  const {title,labels,data,allRoles,byRole,chartType}=getDashData();
+  const {title,labels,data,colors,allRoles,activeStages,byRow,chartType,names,isOnboarded}=getDashData();
   const total=data.reduce((a,b)=>a+b,0)||1;
 
   // Title
   const tEl=document.getElementById('dash-chart-title');if(tEl)tEl.textContent=title;
 
-  // Populate filter
+  // Populate role filter
   const fEl=document.getElementById('dash-role-filter');
   if(fEl)fEl.innerHTML='<option value="all">All Roles</option>'+allRoles.map(r=>`<option value="${r}"${S.dashRoleFilter===r?' selected':''}>${r}</option>`).join('');
 
-  // Dynamic height for bar
-  if(chartType==='bar'){
-    const h=Math.max(220,labels.length*46);
-    document.getElementById('dash-chart-wrap').style.height=h+'px';
-  } else {
-    document.getElementById('dash-chart-wrap').style.height='260px';
-  }
+  // Dynamic height
+  const h=Math.max(220,labels.length*46);
+  document.getElementById('dash-chart-wrap').style.height=(chartType==='bar'?h:260)+'px';
 
-  const bgColors=labels.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]+(chartType==='doughnut'?'DD':'BB'));
-  const borderColors=labels.map((_,i)=>_CHART_PALETTE[i%_CHART_PALETTE.length]);
-
+  const bgColors=colors.map(c=>c+(chartType==='doughnut'?'DD':'BB'));
   const commonTooltip={backgroundColor:'#1F2937',titleColor:'#F9FAFB',bodyColor:'#D1D5DB',padding:10,cornerRadius:8,boxPadding:4};
 
   if(chartType==='doughnut'){
@@ -709,48 +750,99 @@ function initDashChart(){
   } else {
     _dashChart=new Chart(canvas,{
       type:'bar',
-      data:{labels,datasets:[{label:'Count',data,backgroundColor:bgColors,borderColor:borderColors,borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
+      data:{labels,datasets:[{label:'Count',data,backgroundColor:bgColors,borderColor:colors,borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
       options:{
         indexAxis:'y',responsive:true,maintainAspectRatio:false,
         animation:{duration:500,easing:'easeOutQuart'},
         plugins:{
           legend:{display:false},
-          tooltip:{...commonTooltip,callbacks:{label:ctx=>`  ${ctx.parsed.x} candidate${ctx.parsed.x!==1?'s':''} (${Math.round(ctx.parsed.x/total*100)}%)`}}
+          tooltip:{...commonTooltip,callbacks:{
+            label:ctx=>{
+              const pct=Math.round(ctx.parsed.x/total*100);
+              return isOnboarded
+                ? `  ${ctx.parsed.x} people (${pct}%) — click to see names`
+                : `  ${ctx.parsed.x} candidate${ctx.parsed.x!==1?'s':''} (${pct}%)`;
+            }
+          }}
         },
         scales:{
-          x:{grid:{color:'#F3F4F6'},ticks:{color:'#6B7280',font:{size:11}},beginAtZero:true,ticks:{stepSize:1,precision:0}},
+          x:{grid:{color:'#F3F4F6'},ticks:{color:'#6B7280',font:{size:11},stepSize:1,precision:0},beginAtZero:true},
           y:{grid:{display:false},ticks:{color:'#374151',font:{size:12,weight:'600'}}}
         },
         onClick:(e,items)=>{
-          if(!items.length)return;
+          if(!items.length){
+            if(isOnboarded){_dashClickedLabel=null;renderDashNames([],null,null);}
+            return;
+          }
           const clicked=labels[items[0].index];
-          S.dashRoleFilter=S.dashRoleFilter===clicked?'all':clicked;
-          if(_dashChart){_dashChart.destroy();_dashChart=null;}
-          setTimeout(initDashChart,60);
+          const clickedColor=colors[items[0].index];
+          if(isOnboarded){
+            // toggle names panel
+            _dashClickedLabel=_dashClickedLabel===clicked?null:clicked;
+            const d2=getDashData();
+            renderDashNames(d2.names,_dashClickedLabel,clickedColor);
+          } else {
+            // drill-down by role filter
+            S.dashRoleFilter=S.dashRoleFilter===clicked?'all':clicked;
+            if(_dashChart){_dashChart.destroy();_dashChart=null;}
+            setTimeout(initDashChart,60);
+          }
         }
       }
     });
   }
 
-  // Breakdown list
+  // Breakdown sidebar
   const bdEl=document.getElementById('dash-breakdown');
   if(!bdEl)return;
-  const bdTotal=byRole.reduce((a,r)=>a+r.count,0)||1;
-  bdEl.innerHTML=byRole.map((r,i)=>`
-    <div onclick="changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})"
-      style="margin-bottom:7px;padding:6px 8px;border-radius:7px;cursor:pointer;background:${S.dashRoleFilter===r.role?_CHART_PALETTE[i%_CHART_PALETTE.length]+'18':'transparent'};transition:background .12s">
+  const bdTotal=byRow.reduce((a,r)=>a+r.count,0)||1;
+  bdEl.innerHTML=byRow.map((r,i)=>`
+    <div onclick="${isOnboarded
+      ?(S.dashStageFilter==='all'?`changeDashStageFilter(${JSON.stringify(S.dashStageFilter===r.role?'all':r.role)})`:`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`)
+      :`changeDashFilter(${JSON.stringify(S.dashRoleFilter===r.role?'all':r.role)})`}"
+      style="margin-bottom:7px;padding:6px 8px;border-radius:7px;cursor:pointer;background:${(S.dashRoleFilter===r.role||S.dashStageFilter===r.role||_dashClickedLabel===r.role)?r.color+'18':'transparent'};transition:background .12s">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#374151">
-          <span style="width:8px;height:8px;border-radius:50%;background:${_CHART_PALETTE[i%_CHART_PALETTE.length]};flex-shrink:0"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></span>
           ${r.role}
         </span>
-        <span style="font-size:12px;font-weight:700;color:${_CHART_PALETTE[i%_CHART_PALETTE.length]}">${r.count}</span>
+        <span style="font-size:12px;font-weight:700;color:${r.color}">${r.count}</span>
       </div>
       <div style="height:3px;border-radius:2px;background:#F3F4F6;overflow:hidden">
-        <div style="height:100%;border-radius:2px;background:${_CHART_PALETTE[i%_CHART_PALETTE.length]};width:${Math.round(r.count/bdTotal*100)}%;transition:width .4s .1s"></div>
+        <div style="height:100%;border-radius:2px;background:${r.color};width:${Math.round(r.count/bdTotal*100)}%;transition:width .4s .1s"></div>
       </div>
     </div>
   `).join('');
+
+  // If names already selected, re-render names panel
+  if(isOnboarded&&_dashClickedLabel&&names.length) renderDashNames(names,_dashClickedLabel,colors[labels.indexOf(_dashClickedLabel)]||'#6B7280');
+}
+
+function renderDashNames(names,label,color){
+  const panel=document.getElementById('dash-names-panel');
+  if(!panel)return;
+  if(!names||!names.length||!label){panel.style.display='none';return;}
+  panel.style.display='block';
+  const stageStyle=_OB_STAGE_COLS[label]?`background:${_OB_STAGE_COLS[label]}18;border:1px solid ${_OB_STAGE_COLS[label]}44`:'background:#F9FAFB;border:1px solid var(--border)';
+  panel.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color||'#6B7280'}"></span>
+        <span style="font-size:13px;font-weight:700">${label}</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:400">· ${names.length} ${names.length===1?'person':'people'}</span>
+      </div>
+      <button onclick="_dashClickedLabel=null;renderDashNames([],'',null)" class="btn btn-secondary btn-sm">✕ Hide</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${names.map(h=>`
+        <div style="padding:7px 14px;border-radius:8px;${stageStyle};font-size:12px">
+          <span style="font-weight:700">${h.name}</span>
+          <span style="color:var(--muted);margin-left:6px">· ${h.role}</span>
+          ${h.joined?`<span style="color:var(--muted);margin-left:4px">· Joined ${h.joined}</span>`:''}
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
 
 function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);sbSave('schedule',schedule);renderDash();toast('Marked done');}
