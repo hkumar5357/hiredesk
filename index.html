@@ -183,30 +183,31 @@ let schedule=[];
 
 // ── ONBOARDED HIRES (from People Analytics data — all rows) ────────
 const _onboardedHires=[
-  {id:'ob1', name:'Anjali Dixit',      role:'Research & Analytics',  source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-06-03', offer:null,         joined:'2025-06-09', remarks:''},
-  {id:'ob2', name:'Arvind K',          role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-06-27', offer:null,         joined:'2025-07-14', remarks:''},
-  {id:'ob3', name:'Supriya Kalghatgi', role:'Mobile App Developer',   source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-07-09', offer:null,         joined:'2025-07-14', remarks:''},
-  {id:'ob4', name:'Ganesh',            role:'Technical Architect',    source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-06-28', offer:null,         joined:'2025-07-28', remarks:''},
-  {id:'ob5', name:'Kartik Saxena',     role:'Data Engineer',          source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-09-12', offer:'2025-09-17', joined:'2025-10-03', remarks:'Accepted another offer due to better role.'},
-  {id:'ob6', name:'Aditya Negi',       role:'AI Engineer',            source:'LinkedIn', offerAccepted:'No',  stage:'Dropped',         interview:'2025-09-30', offer:'2025-10-07', joined:'2025-10-27', remarks:'Accepted another offer due to better role.'},
-  {id:'ob7', name:'Sukriti Verma',     role:'Frontend Engineer',      source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-09-11', offer:'2025-09-15', joined:'2025-11-01', remarks:'Accepted another offer due to better role.'},
-  {id:'ob8', name:'Utkarsh Bhatt',     role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-09-12', offer:'2025-09-17', joined:'2025-11-19', remarks:'Resigned in 10 days due to work issues.'},
-  {id:'ob9', name:'Divya Dawra',       role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-10-29', offer:'2025-11-04', joined:'2025-11-10', remarks:''},
-  {id:'ob10',name:'Rahul Tarkar',      role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-10-29', offer:'2025-11-04', joined:'2025-11-10', remarks:''},
-  {id:'ob11',name:'Preety Rai',        role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-09-16', offer:'2025-10-29', joined:'2025-11-04', remarks:'Resigned & Terminated during the probation period due to performance & work issues.'},
-  {id:'ob12',name:'Yatendra Jain',     role:'Frontend Engineer',      source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-20', offer:'2025-11-27', joined:'2025-12-01', remarks:''},
-  {id:'ob13',name:'Abhishek Tomar',    role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-27', offer:'2025-11-28', joined:'2025-12-01', remarks:''},
-  {id:'ob14',name:'Lokesh Nahar',      role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-12-09', offer:'2025-12-11', joined:'2025-12-18', remarks:'Accepted another offer due to better role.'},
-  {id:'ob15',name:'Rita Das',          role:'System Design Thinker',  source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-11-25', offer:'2025-11-27', joined:'2025-12-08', remarks:'Terminated during the probation period due to performance issues.'},
-  {id:'ob16',name:'Dev Sharma',        role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-12', offer:'2025-12-15', joined:'2025-12-22', remarks:''},
-  {id:'ob17',name:'Desh Singh',        role:'UI/UX Designer',         source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-24', offer:'2025-12-18', joined:'2026-01-05', remarks:''},
-  {id:'ob18',name:'Kartik Shenmar',    role:'Data Engineer',          source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-18', offer:'2025-12-23', joined:'2026-01-19', remarks:''},
-  {id:'ob19',name:'Shruti Kumra',      role:'Founders Office',        source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-26', offer:'2026-01-27', joined:'2026-02-11', remarks:''},
-  {id:'ob20',name:'Muskan Jain',       role:'QA Engineer',            source:'LinkedIn', offerAccepted:'No',  stage:"Didn't Accept",   interview:'2026-02-06', offer:'2026-02-24', joined:'2026-03-16', remarks:"Didn't accept the offer letter."},
-  {id:'ob21',name:'Pratiksha Gupta',   role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2026-03-17', offer:'2026-04-04', joined:'2026-05-04', remarks:'Accepted another offer due to better role.'},
-  {id:'ob22',name:'Shivam Gupta',      role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2026-04-07', offer:'2026-05-05', joined:'2026-05-07', remarks:''},
-  {id:'ob23',name:'Nikhil Saini',      role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Offer Roll Out',  interview:'2026-04-17', offer:'2026-05-15', joined:'2026-06-19', remarks:''},
+  {id:'ob1', name:'Anjali Dixit',      role:'Research & Analytics',  source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-06-03', offer:null,         joined:'2025-06-09', exitDate:null, remarks:''},
+  {id:'ob2', name:'Arvind K',          role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-06-27', offer:null,         joined:'2025-07-14', exitDate:null, remarks:''},
+  {id:'ob3', name:'Supriya Kalghatgi', role:'Mobile App Developer',   source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-07-09', offer:null,         joined:'2025-07-14', exitDate:null, remarks:''},
+  {id:'ob4', name:'Ganesh',            role:'Technical Architect',    source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-06-28', offer:null,         joined:'2025-07-28', exitDate:null, remarks:''},
+  {id:'ob5', name:'Kartik Saxena',     role:'Data Engineer',          source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-09-12', offer:'2025-09-17', joined:'2025-10-03', exitDate:null, remarks:'Accepted another offer due to better role.'},
+  {id:'ob6', name:'Aditya Negi',       role:'AI Engineer',            source:'LinkedIn', offerAccepted:'No',  stage:'Dropped',         interview:'2025-09-30', offer:'2025-10-07', joined:'2025-10-27', exitDate:null, remarks:'Accepted another offer due to better role.'},
+  {id:'ob7', name:'Sukriti Verma',     role:'Frontend Engineer',      source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-09-11', offer:'2025-09-15', joined:'2025-11-01', exitDate:null, remarks:'Accepted another offer due to better role.'},
+  {id:'ob8', name:'Utkarsh Bhatt',     role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-09-12', offer:'2025-09-17', joined:'2025-11-19', exitDate:null, remarks:'Resigned in 10 days due to work issues.'},
+  {id:'ob9', name:'Divya Dawra',       role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-10-29', offer:'2025-11-04', joined:'2025-11-10', exitDate:null, remarks:''},
+  {id:'ob10',name:'Rahul Tarkar',      role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-10-29', offer:'2025-11-04', joined:'2025-11-10', exitDate:null, remarks:''},
+  {id:'ob11',name:'Preety Rai',        role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-09-16', offer:'2025-10-29', joined:'2025-11-04', exitDate:null, remarks:'Resigned & Terminated during the probation period due to performance & work issues.'},
+  {id:'ob12',name:'Yatendra Jain',     role:'Frontend Engineer',      source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-20', offer:'2025-11-27', joined:'2025-12-01', exitDate:null, remarks:''},
+  {id:'ob13',name:'Abhishek Tomar',    role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-27', offer:'2025-11-28', joined:'2025-12-01', exitDate:null, remarks:''},
+  {id:'ob14',name:'Lokesh Nahar',      role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2025-12-09', offer:'2025-12-11', joined:'2025-12-18', exitDate:null, remarks:'Accepted another offer due to better role.'},
+  {id:'ob15',name:'Rita Das',          role:'System Design Thinker',  source:'LinkedIn', offerAccepted:'Yes', stage:'Early Exit',      interview:'2025-11-25', offer:'2025-11-27', joined:'2025-12-08', exitDate:null, remarks:'Terminated during the probation period due to performance issues.'},
+  {id:'ob16',name:'Dev Sharma',        role:'AI Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-12', offer:'2025-12-15', joined:'2025-12-22', exitDate:null, remarks:''},
+  {id:'ob17',name:'Desh Singh',        role:'UI/UX Designer',         source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-11-24', offer:'2025-12-18', joined:'2026-01-05', exitDate:null, remarks:''},
+  {id:'ob18',name:'Kartik Shenmar',    role:'Data Engineer',          source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-18', offer:'2025-12-23', joined:'2026-01-19', exitDate:null, remarks:''},
+  {id:'ob19',name:'Shruti Kumra',      role:'Founders Office',        source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2025-12-26', offer:'2026-01-27', joined:'2026-02-11', exitDate:null, remarks:''},
+  {id:'ob20',name:'Muskan Jain',       role:'QA Engineer',            source:'LinkedIn', offerAccepted:'No',  stage:"Didn't Accept",   interview:'2026-02-06', offer:'2026-02-24', joined:'2026-03-16', exitDate:null, remarks:"Didn't accept the offer letter."},
+  {id:'ob21',name:'Pratiksha Gupta',   role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Dropped',         interview:'2026-03-17', offer:'2026-04-04', joined:'2026-05-04', exitDate:null, remarks:'Accepted another offer due to better role.'},
+  {id:'ob22',name:'Shivam Gupta',      role:'QA Engineer',            source:'LinkedIn', offerAccepted:'Yes', stage:'Joined',          interview:'2026-04-07', offer:'2026-05-05', joined:'2026-05-07', exitDate:null, remarks:''},
+  {id:'ob23',name:'Nikhil Saini',      role:'Backend Engineer',       source:'LinkedIn', offerAccepted:'Yes', stage:'Offer Roll Out',  interview:'2026-04-17', offer:'2026-05-15', joined:'2026-06-19', exitDate:null, remarks:''},
 ];
+let onboardedHires=[];
 
 let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
@@ -305,7 +306,7 @@ function sbSave(storeKey,val){
     .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
 }
 async function loadAllData(){
-  const keys=['candidates','open_roles','schedule','feedback','notifications'];
+  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires'];
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
@@ -331,6 +332,16 @@ async function loadAllData(){
   // Notifications
   notifications=map['notifications']&&Array.isArray(map['notifications'])?map['notifications']:[];
   if(!map['notifications'])sbSave('notifications',notifications);
+  // Onboarded hires — merge defaults so new default entries propagate
+  const storedOB=map['onboarded_hires'];
+  if(storedOB&&Array.isArray(storedOB)){
+    const obIds=new Set(storedOB.map(h=>h.id));
+    onboardedHires=[...storedOB,..._onboardedHires.filter(h=>!obIds.has(h.id))];
+    if(onboardedHires.length>storedOB.length)sbSave('onboarded_hires',onboardedHires);
+  } else {
+    onboardedHires=_onboardedHires.map(h=>({...h}));
+    sbSave('onboarded_hires',onboardedHires);
+  }
   return true;
 }
 let _rtChannel=null;
@@ -346,6 +357,7 @@ function subscribeRealtime(){
       else if(k==='schedule')schedule=d;
       else if(k==='feedback')feedback=d;
       else if(k==='notifications'){notifications=d;updateBell();}
+      else if(k==='onboarded_hires'){const obIds=new Set(d.map(h=>h.id));onboardedHires=[...d,..._onboardedHires.filter(h=>!obIds.has(h.id))];}
       if(document.getElementById('mc'))renderPage();
     })
     .subscribe();
@@ -488,7 +500,7 @@ function renderDash(){
     {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A'},
-    {l:'Successfully Onboarded',v:_onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#16A34A',link:true},
+    {l:'Successfully Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#16A34A',link:true},
   ];
 
   function schedCard(s){
@@ -565,13 +577,14 @@ function renderDash(){
 function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);sbSave('schedule',schedule);renderDash();toast('Marked done');}
 
 // ── ONBOARDED ─────────────────────────────────────────────────────
-function calcTenure(joinedStr){
+function calcTenure(joinedStr, exitStr){
+  if(!joinedStr)return'—';
   const joined=new Date(joinedStr);
-  const now=new Date();
-  let years=now.getFullYear()-joined.getFullYear();
-  let months=now.getMonth()-joined.getMonth();
-  let days=now.getDate()-joined.getDate();
-  if(days<0){months--;const prevMonth=new Date(now.getFullYear(),now.getMonth(),0);days+=prevMonth.getDate();}
+  const end=exitStr?new Date(exitStr):new Date();
+  let years=end.getFullYear()-joined.getFullYear();
+  let months=end.getMonth()-joined.getMonth();
+  let days=end.getDate()-joined.getDate();
+  if(days<0){months--;const prevMonth=new Date(end.getFullYear(),end.getMonth(),0);days+=prevMonth.getDate();}
   if(months<0){years--;months+=12;}
   const parts=[];
   if(years>0)parts.push(`${years} yr`);
@@ -591,44 +604,39 @@ const _OB_STAGE_STYLE={
 function renderOnboarded(){
   hideSaveBtn();
   const mc=document.getElementById('mc');
-  const roleColors={
+  const RC={
     'AI Engineer':'#8B5CF6','Backend Engineer':'#2563EB','Frontend Engineer':'#0EA5E9',
     'QA Engineer':'#EC4899','Data Engineer':'#F59E0B','UI/UX Designer':'#16A34A',
     'Mobile App Developer':'#06B6D4','Technical Architect':'#DC2626',
     'Research & Analytics':'#7C3AED','Founders Office':'#D97706','System Design Thinker':'#0EA5E9',
   };
   const fmtD=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}):'—';
-  const joined=_onboardedHires.filter(h=>h.stage==='Joined').length;
-  const earlyExit=_onboardedHires.filter(h=>h.stage==='Early Exit').length;
-  const dropped=_onboardedHires.filter(h=>h.stage==='Dropped').length;
-  const other=_onboardedHires.length-joined-earlyExit-dropped;
+  const cJoined=onboardedHires.filter(h=>h.stage==='Joined').length;
+  const cExit=onboardedHires.filter(h=>h.stage==='Early Exit').length;
+  const cDropped=onboardedHires.filter(h=>h.stage==='Dropped').length;
+  const cOther=onboardedHires.length-cJoined-cExit-cDropped;
+  const isAdmin=S.user?.role==='admin';
 
   mc.innerHTML=`
-  <div style="margin-bottom:20px">
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Hire History</div>
-    <div style="font-size:13px;color:var(--muted)">All candidates · 2025–2026 · ${_onboardedHires.length} total</div>
+  <div class="flex-between" style="margin-bottom:20px">
+    <div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:4px">Hire History</div>
+      <div style="font-size:13px;color:var(--muted)">All candidates · 2025–2026 · ${onboardedHires.length} total</div>
+    </div>
+    ${isAdmin?`<button class="btn btn-primary" onclick="showHireModal(null)" style="gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Employee
+    </button>`:''}
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:22px">
-    <div class="card" style="padding:14px;text-align:center">
-      <div style="font-size:24px;font-weight:800;color:#16A34A">${joined}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Joined</div>
-    </div>
-    <div class="card" style="padding:14px;text-align:center">
-      <div style="font-size:24px;font-weight:800;color:#CA8A04">${earlyExit}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Early Exit</div>
-    </div>
-    <div class="card" style="padding:14px;text-align:center">
-      <div style="font-size:24px;font-weight:800;color:#DC2626">${dropped}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Dropped</div>
-    </div>
-    <div class="card" style="padding:14px;text-align:center">
-      <div style="font-size:24px;font-weight:800;color:#6B7280">${other}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">Other</div>
-    </div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:#16A34A">${cJoined}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Joined</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:#CA8A04">${cExit}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Early Exit</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:#DC2626">${cDropped}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Dropped</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:#6B7280">${cOther}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Other</div></div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     <div style="overflow-x:auto">
-    <table style="min-width:1100px">
+    <table style="min-width:1200px">
       <thead>
         <tr>
           <th style="padding:12px 14px;white-space:nowrap">#</th>
@@ -640,15 +648,20 @@ function renderOnboarded(){
           <th style="white-space:nowrap">Interview Date</th>
           <th style="white-space:nowrap">Offer Date</th>
           <th style="white-space:nowrap">Joining Date</th>
+          <th style="white-space:nowrap">Exit Date</th>
           <th style="white-space:nowrap">Tenure</th>
           <th style="white-space:nowrap">Remarks</th>
+          ${isAdmin?'<th style="white-space:nowrap"></th>':''}
         </tr>
       </thead>
       <tbody>
-        ${_onboardedHires.map((h,i)=>{
-          const color=roleColors[h.role]||'#4F46E5';
+        ${onboardedHires.map((h,i)=>{
+          const color=RC[h.role]||'#4F46E5';
           const ss=_OB_STAGE_STYLE[h.stage]||{bg:'#F3F4F6',c:'#6B7280'};
-          const tenure=h.stage==='Joined'?calcTenure(h.joined):'—';
+          const showTenure=h.joined&&(h.stage==='Joined'||h.exitDate);
+          const tenure=showTenure?calcTenure(h.joined,h.exitDate||null):'—';
+          const tenureLabel=h.exitDate?`<span class="badge" style="background:#FEF2F2;color:#DC2626;font-size:11px">${tenure} <span style="font-size:9px;opacity:.7">(exited)</span></span>`
+            :`<span class="badge" style="background:#F0FDF4;color:#16A34A;font-size:11px">${tenure}</span>`;
           return`<tr>
             <td style="padding:12px 14px;color:var(--muted);font-size:12px">${i+1}</td>
             <td style="white-space:nowrap">
@@ -660,25 +673,88 @@ function renderOnboarded(){
             <td><span class="badge" style="background:${color}12;color:${color};white-space:nowrap">${h.role}</span></td>
             <td style="font-size:12px;color:var(--muted);white-space:nowrap">
               <span style="display:inline-flex;align-items:center;gap:4px">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                ${h.source}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                ${h.source||'—'}
               </span>
             </td>
-            <td style="text-align:center">
-              <span class="badge" style="background:${h.offerAccepted==='Yes'?'#F0FDF4':'#FEF2F2'};color:${h.offerAccepted==='Yes'?'#16A34A':'#DC2626'}">${h.offerAccepted}</span>
-            </td>
+            <td style="text-align:center"><span class="badge" style="background:${h.offerAccepted==='Yes'?'#F0FDF4':'#FEF2F2'};color:${h.offerAccepted==='Yes'?'#16A34A':'#DC2626'}">${h.offerAccepted||'—'}</span></td>
             <td><span class="badge" style="background:${ss.bg};color:${ss.c};white-space:nowrap">${h.stage}</span></td>
             <td style="font-size:12px;color:var(--muted);white-space:nowrap">${fmtD(h.interview)}</td>
             <td style="font-size:12px;color:var(--muted);white-space:nowrap">${fmtD(h.offer)}</td>
             <td style="font-size:12px;color:var(--text);white-space:nowrap">${fmtD(h.joined)}</td>
-            <td style="white-space:nowrap">${tenure!=='—'?`<span class="badge" style="background:#F0FDF4;color:#16A34A;font-size:11px">${tenure}</span>`:`<span style="color:var(--muted);font-size:12px">—</span>`}</td>
-            <td style="font-size:12px;color:var(--muted);max-width:220px">${h.remarks||'—'}</td>
+            <td style="font-size:12px;white-space:nowrap">${h.exitDate?`<span style="color:#DC2626;font-weight:600">${fmtD(h.exitDate)}</span>`:`<span style="color:var(--muted)">—</span>`}</td>
+            <td style="white-space:nowrap">${tenure!=='—'?tenureLabel:`<span style="color:var(--muted);font-size:12px">—</span>`}</td>
+            <td style="font-size:12px;color:var(--muted);max-width:200px">${h.remarks||'—'}</td>
+            ${isAdmin?`<td><button class="btn btn-sm btn-secondary" onclick="showHireModal('${h.id}')">✏️ Edit</button></td>`:''}
           </tr>`;
         }).join('')}
       </tbody>
     </table>
     </div>
   </div>`;
+}
+
+const _OB_STAGES=['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'];
+
+function showHireModal(id){
+  const h=id?onboardedHires.find(x=>x.id===id):null;
+  const title=h?'Edit Employee':'Add Employee';
+  const v=f=>h?h[f]||'':'';
+  modal(`
+  <div class="flex-between" style="margin-bottom:20px">
+    <div style="font-size:16px;font-weight:800">${title}</div>
+    <button onclick="closeModal()" class="btn btn-secondary btn-sm">✕</button>
+  </div>
+  <div class="grid2" style="gap:14px">
+    <div><label class="label">Name *</label><input id="ob-name" class="input" value="${v('name')}" placeholder="Full name"/></div>
+    <div><label class="label">Role *</label><input id="ob-role" class="input" value="${v('role')}" placeholder="e.g. Backend Engineer"/></div>
+    <div><label class="label">Source</label><input id="ob-source" class="input" value="${v('source')||'LinkedIn'}" placeholder="LinkedIn"/></div>
+    <div><label class="label">Offer Accepted</label>
+      <select id="ob-offerAccepted" class="input">
+        <option value="Yes" ${v('offerAccepted')==='Yes'?'selected':''}>Yes</option>
+        <option value="No" ${v('offerAccepted')==='No'?'selected':''}>No</option>
+      </select>
+    </div>
+    <div><label class="label">Stage</label>
+      <select id="ob-stage" class="input">
+        ${_OB_STAGES.map(s=>`<option value="${s}" ${v('stage')===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div><!-- spacer --></div>
+    <div><label class="label">Interview Date</label><input id="ob-interview" type="date" class="input" value="${v('interview')}"/></div>
+    <div><label class="label">Offer Date</label><input id="ob-offer" type="date" class="input" value="${v('offer')}"/></div>
+    <div><label class="label">Joining Date</label><input id="ob-joined" type="date" class="input" value="${v('joined')}"/></div>
+    <div><label class="label">Exit Date</label><input id="ob-exitDate" type="date" class="input" value="${v('exitDate')}"/></div>
+  </div>
+  <div style="margin-top:14px"><label class="label">Remarks</label><textarea id="ob-remarks" class="input" rows="2" style="resize:vertical">${v('remarks')}</textarea></div>
+  <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+    <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+    <button onclick="saveHireModal('${id||''}')" class="btn btn-primary">Save</button>
+  </div>`);
+}
+
+function saveHireModal(id){
+  const g=i=>document.getElementById(i)?.value?.trim()||'';
+  const name=g('ob-name');const role=g('ob-role');
+  if(!name||!role){toast('Name and Role are required','err');return;}
+  if(id){
+    onboardedHires=onboardedHires.map(h=>h.id===id?{...h,
+      name,role,source:g('ob-source'),offerAccepted:g('ob-offerAccepted'),
+      stage:g('ob-stage'),interview:g('ob-interview')||null,offer:g('ob-offer')||null,
+      joined:g('ob-joined')||null,exitDate:g('ob-exitDate')||null,remarks:g('ob-remarks'),
+    }:h);
+  } else {
+    const newId='ob_'+Date.now();
+    onboardedHires=[...onboardedHires,{
+      id:newId,name,role,source:g('ob-source'),offerAccepted:g('ob-offerAccepted'),
+      stage:g('ob-stage'),interview:g('ob-interview')||null,offer:g('ob-offer')||null,
+      joined:g('ob-joined')||null,exitDate:g('ob-exitDate')||null,remarks:g('ob-remarks'),
+    }];
+  }
+  sbSave('onboarded_hires',onboardedHires);
+  closeModal();
+  renderOnboarded();
+  toast(id?'Employee updated':'Employee added');
 }
 
 function openCandFromSchedule(cid){
