@@ -501,10 +501,9 @@ function renderDash(){
   const todaySched=schedule.filter(s=>s.date===today).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const tomorrowSched=schedule.filter(s=>s.date===tomorrow).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const stats=[
-    {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A',key:'selected'},
-    {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
     {l:'Current Hiring Status',v:candidates.length,i:'📊',c:'#7C3AED',key:'hiringStatus'},
-    {l:'Interview Stage',v:candidates.filter(c=>['Behavioral Round','Discussion Round','Technical Round','Final Discussion'].includes(c.stage)&&c.status!=='red').length,i:'🎯',c:'#0EA5E9',key:'interviewStage'},
+    {l:'Interview Stage',v:candidates.filter(c=>['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion'].includes(c.stage)&&c.status!=='red').length,i:'🎯',c:'#0EA5E9',key:'interviewStage'},
+    {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined').length,i:'✅',c:'#059669',key:'onboarded'},
   ];
 
   function schedCard(s){
@@ -559,7 +558,7 @@ function renderDash(){
         </select>`:''}
         ${S.dashCard==='interviewStage'?`<select class="input" id="dash-round-filter" style="width:178px;font-size:12px" onchange="changeDashRoundFilter(this.value)">
           <option value="all">All Rounds</option>
-          ${['Behavioral Round','Discussion Round','Technical Round','Final Discussion / Offer Roll Out'].map(r=>`<option value="${r}"${S.dashRoundFilter===r?' selected':''}>${r}</option>`).join('')}
+          ${['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion / Offer Roll Out'].map(r=>`<option value="${r}"${S.dashRoundFilter===r?' selected':''}>${r}</option>`).join('')}
         </select>`:''}
         <select class="input" id="dash-role-filter" style="width:148px;font-size:12px" onchange="changeDashFilter(this.value)">
           <option value="all">All Roles</option>
@@ -749,6 +748,7 @@ function getDashData(){
   // ── Interview Stage card ──
   if(key==='interviewStage'){
     const _ROUND_DEFS=[
+      {l:'Screening',stages:['Screening'],c:'#6366F1'},
       {l:'Behavioral Round',stages:['Behavioral Round'],c:'#7C3AED'},
       {l:'Discussion Round',stages:['Discussion Round'],c:'#0EA5E9'},
       {l:'Technical Round',stages:['Technical Round'],c:'#F59E0B'},
