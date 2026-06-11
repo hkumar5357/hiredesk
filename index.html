@@ -505,7 +505,7 @@ function renderDash(){
     {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB',key:'pipeline'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04',key:'inProcess'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A',key:'selected'},
-    {l:'Onboarded',v:onboardedHires.length,i:'✅',c:'#059669',key:'onboarded'},
+    {l:'Onboarded',v:onboardedHires.filter(h=>h.stage==='Joined'&&!h.exitDate).length,i:'✅',c:'#059669',key:'onboarded'},
   ];
 
   function schedCard(s){
