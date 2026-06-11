@@ -181,6 +181,22 @@ let notifications=[];
 const _defaultSchedule=[];
 let schedule=[];
 
+// ── ONBOARDED HIRES (from People Analytics data) ──────────────────
+const _onboardedHires=[
+  {id:'ob1',name:'Anjali Dixit',role:'Research & Analytics',joined:'2025-06-09'},
+  {id:'ob2',name:'Supriya Kalghatgi',role:'Mobile App Developer',joined:'2025-07-14'},
+  {id:'ob3',name:'Ganesh',role:'Technical Architect',joined:'2025-07-28'},
+  {id:'ob4',name:'Divya Dawra',role:'Backend Engineer',joined:'2025-11-10'},
+  {id:'ob5',name:'Rahul Tarkar',role:'Backend Engineer',joined:'2025-11-10'},
+  {id:'ob6',name:'Yatendra Jain',role:'Frontend Engineer',joined:'2025-12-01'},
+  {id:'ob7',name:'Abhishek Tomar',role:'QA Engineer',joined:'2025-12-01'},
+  {id:'ob8',name:'Dev Sharma',role:'AI Engineer',joined:'2025-12-22'},
+  {id:'ob9',name:'Desh Singh',role:'UI/UX Designer',joined:'2026-01-05'},
+  {id:'ob10',name:'Kartik Shenmar',role:'Data Engineer',joined:'2026-01-19'},
+  {id:'ob11',name:'Shruti Kumra',role:'Founders Office',joined:'2026-02-11'},
+  {id:'ob12',name:'Shivam Gupta',role:'QA Engineer',joined:'2026-05-07'},
+];
+
 let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 
 // ── UTILS ─────────────────────────────────────────────────────────
@@ -367,6 +383,7 @@ function renderApp(){
     {id:'openRoles',label:'Open Roles',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
     {id:'applications',label:'Applications',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
     {id:'pipeline',label:'Pipeline',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'},
+    {id:'onboarded',label:'Onboarded',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',badge:'New'},
   ].filter(n=>!n.adminOnly||isAdmin);
 
   document.getElementById('hd-root').innerHTML=`
@@ -391,7 +408,7 @@ function renderApp(){
         <span>HireDesk</span>
       </div>
       <nav class="sb-nav" id="sb-nav">
-        ${navs.map(n=>`<div class="nav-item${S.page===n.id?' active':''}" onclick="nav('${n.id}')" id="ni-${n.id}">${n.icon}<span>${n.label}</span></div>`).join('')}
+        ${navs.map(n=>`<div class="nav-item${S.page===n.id?' active':''}" onclick="nav('${n.id}')" id="ni-${n.id}">${n.icon}<span>${n.label}</span>${n.badge?`<span style="margin-left:auto;font-size:9px;font-weight:700;background:#16A34A;color:#fff;padding:2px 6px;border-radius:10px">${n.badge}</span>`:''}</div>`).join('')}
         ${isAdmin?`<div class="nav-item" onclick="showAddCand()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/></svg><span>Add Candidate</span></div>`:''}
       </nav>
       <div class="sb-footer">
@@ -430,7 +447,7 @@ function renderApp(){
 }
 
 function pageTitle(){
-  return{dashboard:'Dashboard',openRoles:'Open Roles',applications:'Applications',pipeline:'Pipeline'}[S.page]||'';
+  return{dashboard:'Dashboard',openRoles:'Open Roles',applications:'Applications',pipeline:'Pipeline',onboarded:'Onboarded'}[S.page]||'';
 }
 function nav(page){
   S.page=page;
@@ -442,7 +459,7 @@ function nav(page){
   renderPage();
 }
 function renderPage(){
-  const f={dashboard:renderDash,openRoles:renderRoles,applications:renderApps,pipeline:renderPipeline};
+  const f={dashboard:renderDash,openRoles:renderRoles,applications:renderApps,pipeline:renderPipeline,onboarded:renderOnboarded};
   f[S.page]?.();
 }
 
@@ -460,6 +477,7 @@ function renderDash(){
     {l:'Active Pipeline',v:candidates.filter(c=>!['red','green'].includes(c.status)).length,i:'⚡',c:'#2563EB'},
     {l:'In Process',v:candidates.filter(c=>c.status==='blue').length,i:'🔄',c:'#CA8A04'},
     {l:'Selected',v:candidates.filter(c=>c.stage==='Offer Letter Rolled Out'||c.status==='green').length,i:'🎉',c:'#16A34A'},
+    {l:'Successfully Onboarded',v:_onboardedHires.length,i:'✅',c:'#16A34A',link:true},
   ];
 
   function schedCard(s){
@@ -481,11 +499,12 @@ function renderDash(){
   }
 
   mc.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px">
     ${stats.map(s=>`
-    <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px">
+    <div class="card" style="display:flex;align-items:center;gap:14px;padding:16px;${s.link?'cursor:pointer;border-color:#16A34A44;':''}${s.link?'transition:box-shadow .15s;':''}" ${s.link?`onclick="nav('onboarded')" onmouseenter="this.style.boxShadow='0 4px 14px rgba(22,163,74,.15)'" onmouseleave="this.style.boxShadow=''"`:''}>
       <div style="width:42px;height:42px;border-radius:10px;background:${s.c}18;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${s.i}</div>
-      <div><div style="font-size:22px;font-weight:800">${s.v}</div><div style="font-size:11px;color:var(--muted)">${s.l}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-size:22px;font-weight:800;color:${s.link?'#16A34A':'inherit'}">${s.v}</div><div style="font-size:11px;color:var(--muted)">${s.l}</div></div>
+      ${s.link?`<svg style="width:14px;height:14px;color:#16A34A;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>`:''}
     </div>`).join('')}
   </div>
 
@@ -533,6 +552,74 @@ function renderDash(){
 }
 
 function doneSchedule(id){schedule=schedule.map(s=>s.id===id?{...s,status:'Done'}:s);sbSave('schedule',schedule);renderDash();toast('Marked done');}
+
+// ── ONBOARDED ─────────────────────────────────────────────────────
+function calcTenure(joinedStr){
+  const joined=new Date(joinedStr);
+  const now=new Date();
+  let years=now.getFullYear()-joined.getFullYear();
+  let months=now.getMonth()-joined.getMonth();
+  let days=now.getDate()-joined.getDate();
+  if(days<0){months--;const prevMonth=new Date(now.getFullYear(),now.getMonth(),0);days+=prevMonth.getDate();}
+  if(months<0){years--;months+=12;}
+  const parts=[];
+  if(years>0)parts.push(`${years} yr`);
+  if(months>0)parts.push(`${months} mo`);
+  if(days>0)parts.push(`${days}d`);
+  return parts.join(' ')||'<1d';
+}
+
+function renderOnboarded(){
+  hideSaveBtn();
+  const mc=document.getElementById('mc');
+  const roleColors={
+    'AI Engineer':'#8B5CF6','Backend Engineer':'#2563EB','Frontend Engineer':'#0EA5E9',
+    'QA Engineer':'#EC4899','Data Engineer':'#F59E0B','UI/UX Designer':'#16A34A',
+    'Mobile App Developer':'#06B6D4','Technical Architect':'#DC2626',
+    'Research & Analytics':'#7C3AED','Founders Office':'#D97706',
+  };
+  mc.innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:4px">Onboarded Team Members</div>
+      <div style="font-size:13px;color:var(--muted)">Successfully joined Uplevyl · 2025–2026</div>
+    </div>
+    <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 18px;text-align:center">
+      <div style="font-size:28px;font-weight:800;color:#16A34A;line-height:1">${_onboardedHires.length}</div>
+      <div style="font-size:11px;color:#16A34A;font-weight:600">Total Hires</div>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead>
+        <tr>
+          <th style="padding:12px 18px">Name</th>
+          <th>Role</th>
+          <th>Date of Joining</th>
+          <th>Tenure</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${_onboardedHires.map((h,i)=>{
+          const color=roleColors[h.role]||'#4F46E5';
+          const tenure=calcTenure(h.joined);
+          const joinedFmt=new Date(h.joined).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+          return`<tr>
+            <td style="padding:13px 18px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:34px;height:34px;border-radius:50%;background:${color}18;border:1.5px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0">${h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+                <div style="font-weight:600;font-size:13px">${h.name}</div>
+              </div>
+            </td>
+            <td><span class="badge" style="background:${color}12;color:${color}">${h.role}</span></td>
+            <td style="color:var(--text);font-size:13px">${joinedFmt}</td>
+            <td><span class="badge" style="background:#F0FDF4;color:#16A34A;font-size:11px">${tenure}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
 
 function openCandFromSchedule(cid){
   const c=candOf(cid);if(!c)return;
