@@ -1282,6 +1282,7 @@ function renderProfile(){
   document.getElementById('mc').innerHTML=`
   <div class="bc">
     <a onclick="S.view='roles';renderApps()">Applications</a>
+
     <span style="color:#D1D5DB">›</span>
     <a onclick="S.view='candidates';renderApps()">${role?.title||''}</a>
     <span style="color:#D1D5DB">›</span>
@@ -1311,7 +1312,7 @@ function renderProfile(){
         </div>
         <div class="divider"></div>
         <div class="grid2">
-          ${[['LinkedIn URL','li','url','https://linkedin.com/in/...'],['Resume URL','cv','url','https://drive.google.com/...'],['Email Address','email','email','candidate@email.com'],['Phone Number','phone','tel','+91 98765 43210'],['Current CTC','cctc','text','e.g. 12 LPA'],['Expected CTC','ectc','text','e.g. 18–20 LPA'],['Notice Period','notice','text','e.g. Immediate / 30 days'],['Years of Experience','yoe','text','e.g. 4'],].map(([l,f,t,p])=>`
+          ${[['LinkedIn URL','li','text','https://linkedin.com/in/...'],['Resume URL','cv','text','Paste Google Drive / SharePoint URL…'],['Email Address','email','email','candidate@email.com'],['Phone Number','phone','tel','+91 98765 43210'],['Current CTC','cctc','text','e.g. 12 LPA'],['Expected CTC','ectc','text','e.g. 18–20 LPA'],['Notice Period','notice','text','e.g. Immediate / 30 days'],['Years of Experience','yoe','text','e.g. 4'],].map(([l,f,t,p])=>`
           <div><label class="label">${l}</label><input class="input" type="${t}" value="${c[f]||''}" placeholder="${p}" data-cid="${c.id}" data-field="${f}" onblur="updCand('${c.id}','${f}',this.value)"></div>`).join('')}
         </div>
         ${c.skills?`<div style="margin-top:14px"><label class="label">Skills / Tags</label><div>${c.skills.split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div></div>`:''}
@@ -1398,8 +1399,53 @@ function renderProfile(){
           ${c.stage===s?'<span style="font-size:10px;color:#4F46E5;font-weight:700;margin-left:auto">Current</span>':''}
         </div>`).join('')}
       </div>
+      ${(()=>{
+        const sc=FB_STAGES.map(st=>{const x=cfb.filter(f=>f.stage===st&&f.score!=null);return x.length?x[x.length-1].score:null;});
+        if(!sc.some(v=>v!=null))return'';
+        return`<div class="card" style="margin-top:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">📊 Score Chart</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Per round · out of 25 · 60% threshold = 15</div>
+          <div style="position:relative;height:180px"><canvas id="sc-chart-${c.id}"></canvas></div>
+        </div>`;
+      })()}
     </div>
   </div>`;
+  setTimeout(()=>initScoreChart(c.id),80);
+}
+
+function initScoreChart(cid){
+  const canvas=document.getElementById(`sc-chart-${cid}`);if(!canvas)return;
+  const cfb=feedback.filter(f=>f.cid===cid);
+  const shortL=['Behavioral','Discussion','Technical','Final'];
+  const scores=FB_STAGES.map(st=>{const x=cfb.filter(f=>f.stage===st&&f.score!=null);return x.length?x[x.length-1].score:null;});
+  if(!scores.some(v=>v!=null))return;
+  const data=scores.map(v=>v??0);
+  const barColors=data.map(v=>v===0?'#E5E7EB':v>=15?'#16A34A99':v>=10?'#CA8A0499':'#DC262699');
+  const borderColors=data.map(v=>v===0?'#D1D5DB':v>=15?'#16A34A':v>=10?'#CA8A04':'#DC2626');
+  new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels:shortL,
+      datasets:[
+        {label:'Score',data,backgroundColor:barColors,borderColor:borderColors,borderWidth:2,borderRadius:8,borderSkipped:false},
+        {label:'Min (60%)',data:[15,15,15,15],type:'line',borderColor:'#EF444488',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:600,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#1F2937',titleColor:'#F9FAFB',bodyColor:'#D1D5DB',padding:8,cornerRadius:6,
+          callbacks:{label:ctx=>ctx.dataset.label==='Min (60%)'?'Min threshold: 15/25':`Score: ${ctx.parsed.y}/25 (${Math.round(ctx.parsed.y/25*100)}%)`}}
+      },
+      scales:{
+        y:{min:0,max:25,grid:{color:'#F3F4F6'},ticks:{stepSize:5,color:'#9CA3AF',font:{size:10}},
+          afterDataLimits:scale=>{scale.max=25;}},
+        x:{grid:{display:false},ticks:{color:'#374151',font:{size:11,weight:'600'}}}
+      }
+    }
+  });
 }
 
 function saveProfile(){
@@ -1417,7 +1463,8 @@ function saveProfile(){
   toast('Changes saved');
 }
 function updCand(id,field,val){
-  candidates=candidates.map(c=>c.id===id?{...c,[field]:val}:c);
+  const v=typeof val==='string'?val.trim():val;
+  candidates=candidates.map(c=>c.id===id?{...c,[field]:v}:c);
   sbSave('candidates',candidates);
   if(field==='status'||field==='stage')renderProfile();
 }
