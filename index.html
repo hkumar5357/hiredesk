@@ -1518,6 +1518,14 @@ function renderProfile(){
           <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="showFBModal('${c.id}')">+ Add Feedback</button>
         </div>
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700">🗒️ Notes</div>
+          ${c.notes?`<span style="font-size:10px;color:var(--muted)">Saved</span>`:''}
+        </div>
+        <textarea id="cand-notes-${c.id}" class="input" rows="4" placeholder="Add notes about this candidate…" style="resize:vertical;font-size:12px;line-height:1.6;margin-bottom:8px">${c.notes||''}</textarea>
+        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="saveNote('${c.id}')">💾 Save Note</button>
+      </div>
       <div class="card">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px">Interview Stage Tracker</div>
         ${STAGES.map(s=>`
@@ -1595,6 +1603,18 @@ function updCand(id,field,val){
   candidates=candidates.map(c=>c.id===id?{...c,[field]:v}:c);
   sbSave('candidates',candidates);
   if(field==='status'||field==='stage')renderProfile();
+}
+function saveNote(cid){
+  const el=document.getElementById(`cand-notes-${cid}`);
+  if(!el)return;
+  const note=el.value.trim();
+  candidates=candidates.map(c=>c.id===cid?{...c,notes:note}:c);
+  sbSave('candidates',candidates);
+  toast('Note saved ✓');
+  // update the "Saved" label without full re-render
+  const lbl=el.previousElementSibling?.querySelector('span');
+  if(lbl){lbl.textContent='Saved';lbl.style.color='#16A34A';}
+  else{const h=el.closest('.card').querySelector('div');if(h){const s=document.createElement('span');s.style.cssText='font-size:10px;color:#16A34A';s.textContent='Saved';h.appendChild(s);}}
 }
 function submitFB(cid,stage){
   const key=`fbt-${cid}-${stage.replace(/ /g,'_')}`;
