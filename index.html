@@ -116,6 +116,7 @@ const FB_COMPETENCIES={
 };
 const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},2:{label:'Concern',bg:'#EA580C'},3:{label:'Mixed',bg:'#CA8A04'},4:{label:'Promising',bg:'#2563EB'},5:{label:'Strong Yes',bg:'#16A34A'}};
 let _fbDraft={};
+let _fbMeta={};
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -1627,11 +1628,14 @@ function saveNote(cid){
 // ── COMPETENCY FEEDBACK ───────────────────────────────────────────
 function initFBDraft(cid){
   if(!_fbDraft[cid])_fbDraft[cid]={};
+  if(!_fbMeta[cid])_fbMeta[cid]={};
   FB_STAGES.forEach(stage=>{
+    if(!_fbMeta[cid][stage])_fbMeta[cid][stage]={hire:null};
     if(_fbDraft[cid][stage])return;
     const existing=feedback.filter(f=>f.cid===cid&&f.stage===stage).sort((a,b)=>a.on>b.on?-1:1)[0];
     if(existing?.competencies?.length){
       _fbDraft[cid][stage]=existing.competencies.map(c=>({...c}));
+      if(existing.hire!=null)_fbMeta[cid][stage].hire=existing.hire;
     } else {
       _fbDraft[cid][stage]=(FB_COMPETENCIES[stage]||[]).map((name,i)=>({id:'cp'+i+stage.replace(/ /g,''),name,score:null,note:''}));
     }
@@ -1639,14 +1643,30 @@ function initFBDraft(cid){
 }
 function saveFBDraft(cid,stage){
   const comps=(_fbDraft[cid]||{})[stage]||[];
+  const hire=(_fbMeta[cid]||{})[stage]?.hire??null;
   const reviewer=S.user?.name||'Unknown';
   const today=new Date().toISOString().split('T')[0];
   const idx=feedback.findIndex(f=>f.cid===cid&&f.stage===stage&&f.reviewer===reviewer);
   const scored=comps.filter(c=>c.score!=null);
   const avg=scored.length?scored.reduce((a,c)=>a+c.score,0)/scored.length:null;
-  const entry={id:idx>=0?feedback[idx].id:'f'+Date.now(),cid,stage,reviewer,on:today,competencies:comps,text:comps.filter(c=>c.note).map(c=>`${c.name}: ${c.note}`).join('\n'),score:avg?Math.round(avg*5):null};
+  const entry={id:idx>=0?feedback[idx].id:'f'+Date.now(),cid,stage,reviewer,on:today,competencies:comps,text:comps.filter(c=>c.note).map(c=>`${c.name}: ${c.note}`).join('\n'),score:avg?Math.round(avg*5):null,hire};
   if(idx>=0){feedback=feedback.map((f,i)=>i===idx?entry:f);}else{feedback=[...feedback,entry];}
   sbSave('feedback',feedback);
+}
+function setRoundHire(cid,stage,val){
+  if(!_fbMeta[cid])_fbMeta[cid]={};
+  if(!_fbMeta[cid][stage])_fbMeta[cid][stage]={hire:null};
+  _fbMeta[cid][stage].hire=(_fbMeta[cid][stage].hire===val)?null:val;
+  saveFBDraft(cid,stage);
+  refreshFBRound(cid,stage);
+}
+function saveRound(cid,stage){
+  saveFBDraft(cid,stage);
+  refreshScoreSidebar(cid);
+  const sk=stage.replace(/ /g,'_');
+  const btn=document.getElementById(`save-btn-${cid}-${sk}`);
+  if(btn){const orig=btn.innerHTML;btn.style.background='#16A34A';btn.style.color='#fff';btn.innerHTML='✓ Saved';setTimeout(()=>{btn.style.background='';btn.style.color='';btn.innerHTML=orig;},1500);}
+  toast('Round saved ✓');
 }
 function getStageAvg(cid,stage){
   const draft=(_fbDraft[cid]||{})[stage];
@@ -1666,16 +1686,20 @@ function renderFBSection(c){
 }
 function renderFBRound(cid,stage){
   const comps=(_fbDraft[cid]||{})[stage]||[];
+  const hire=(_fbMeta[cid]||{})[stage]?.hire??null;
   const sc=STAGE_C[stage]||'#4F46E5';
   const scored=comps.filter(c=>c.score!=null);
   const sum=scored.reduce((a,c)=>a+c.score,0);
   const avg=scored.length?sum/scored.length:0;
   const sk=stage.replace(/ /g,'_');
+  const hireLabel=hire===true?'✅ Hire':hire===false?'❌ No Hire':null;
+  const hireBadge=hire===true?`<span style="background:#DCFCE7;color:#16A34A;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">✅ Hire</span>`:hire===false?`<span style="background:#FEE2E2;color:#DC2626;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">❌ No Hire</span>`:'';
   return`<div id="fb-round-${cid}-${sk}" style="margin-bottom:14px;border:1px solid ${sc}30;border-radius:10px;overflow:hidden">
     <div style="background:${sc}12;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${sc}20">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="width:8px;height:8px;border-radius:50%;background:${sc};flex-shrink:0"></div>
         <span style="font-size:13px;font-weight:700">${stage}</span>
+        ${hireBadge}
       </div>
       ${scored.length?`<span style="font-size:11px;font-weight:700;color:${sc};background:${sc}20;padding:3px 10px;border-radius:20px">Avg ${avg.toFixed(1)}/5</span>`:'<span style="font-size:11px;color:var(--muted)">Not scored yet</span>'}
     </div>
@@ -1701,6 +1725,17 @@ function renderFBRound(cid,stage){
         <span style="font-size:11px;color:var(--muted)">(${scored.length} of ${comps.length} scored)</span>
       </div>`:''}
       <button onclick="addCompRow('${cid}','${stage}')" style="margin-top:10px;width:100%;background:none;border:1.5px dashed ${sc}50;color:${sc};padding:7px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">+ Add Competency</button>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;color:var(--muted)">Recommend to hire?</span>
+          <button onclick="setRoundHire('${cid}','${stage}',true)" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${hire===true?'#16A34A':'#D1D5DB'};background:${hire===true?'#DCFCE7':'#fff'};color:${hire===true?'#16A34A':'#6B7280'};font-size:11px;font-weight:700;cursor:pointer;transition:all .2s">✅ Yes</button>
+          <button onclick="setRoundHire('${cid}','${stage}',false)" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${hire===false?'#DC2626':'#D1D5DB'};background:${hire===false?'#FEE2E2':'#fff'};color:${hire===false?'#DC2626':'#6B7280'};font-size:11px;font-weight:700;cursor:pointer;transition:all .2s">❌ No</button>
+        </div>
+        <button id="save-btn-${cid}-${sk}" onclick="saveRound('${cid}','${stage}')" style="padding:6px 16px;border-radius:8px;border:1.5px solid ${sc};background:#fff;color:${sc};font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Round
+        </button>
+      </div>
     </div>
   </div>`;
 }
