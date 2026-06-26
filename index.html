@@ -108,6 +108,14 @@ tr:hover td{background:#F9FAFB}
 const STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
 const STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
 const FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
+const FB_COMPETENCIES={
+  'Behavioral Round':['Seriousness & Role Alignment','Communication & Impact Orientation','AI Adaptability','Continuous Learning Mindset','Collaboration & Leadership Mindset','Technical Competency (if required)'],
+  'Discussion Round':['Excitement for Role','AI-First Engineering','Frontend Depth','Technical Depth','Documentation Mindset','Systems Builder','Curiosity','Communication'],
+  'Technical Round':['Ownership & Follow-Through','Documentation-Before-Code Mindset','Ambiguity & Cross-Functional Collaboration','Mission Alignment & Purpose','Reliability Under Pressure'],
+  'Final Discussion':[]
+};
+const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},2:{label:'Concern',bg:'#EA580C'},3:{label:'Mixed',bg:'#CA8A04'},4:{label:'Promising',bg:'#2563EB'},5:{label:'Strong Yes',bg:'#16A34A'}};
+let _fbDraft={};
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -1475,59 +1483,31 @@ function renderProfile(){
         </div>
         ${c.skills?`<div style="margin-top:14px"><label class="label">Skills / Tags</label><div>${c.skills.split(',').map(t=>`<span class="tag">${t.trim()}</span>`).join('')}</div></div>`:''}
       </div>
-      <div class="card" id="fb-section">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px">Interview Feedback</div>
-        ${FB_STAGES.map(stage=>{
-          const sfb=cfb.filter(f=>f.stage===stage);
-          const latestScore=sfb.filter(f=>f.score!=null).slice(-1)[0]?.score;
-          return`<div class="fb-round">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              ${stBadge(stage)}
-              ${latestScore!=null?`<span style="font-size:12px;font-weight:700;color:#4F46E5;background:#EEF2FF;padding:3px 10px;border-radius:20px">${latestScore}/25</span>`:''}
-            </div>
-            ${sfb.map(f=>`<div class="fb-submitted">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <span style="font-size:11px;color:var(--muted)">${f.reviewer} · ${fmtDate(f.on)}</span>
-                ${f.score!=null?`<span style="font-size:11px;font-weight:700;color:#4F46E5">${f.score}/25</span>`:''}
-              </div>
-              <div style="font-size:13px;color:var(--text);line-height:1.6">${f.text}</div>
-            </div>`).join('')}
-            <textarea class="input" id="fbt-${c.id}-${stage.replace(/ /g,'_')}" rows="2" placeholder="Add feedback for ${stage}…" style="resize:vertical;font-size:12px;margin-bottom:8px"></textarea>
-            <div style="display:flex;align-items:center;gap:8px">
-              <select class="input" id="fbsc-${c.id}-${stage.replace(/ /g,'_')}" style="width:130px;font-size:12px">
-                <option value="">Score (0–25)</option>
-                ${Array.from({length:26},(_,i)=>`<option value="${i}">${i} / 25</option>`).join('')}
-              </select>
-              <button class="btn btn-secondary btn-sm" onclick="submitFB('${c.id}','${stage}')">Submit</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
+      ${renderFBSection(c)}
     </div>
     <div>
       ${(()=>{
-        const scored=FB_STAGES.map(st=>{const stFB=cfb.filter(f=>f.stage===st&&f.score!=null);if(!stFB.length)return null;return{stage:st,score:stFB[stFB.length-1].score};}).filter(Boolean);
+        const scored=FB_STAGES.map(st=>{const avg=getStageAvg(c.id,st);return avg!=null?{stage:st,avg}:null;}).filter(Boolean);
         if(!scored.length)return'';
-        const total=scored.reduce((a,s)=>a+s.score,0);
-        const max=scored.length*25;
-        const pct=Math.round(total/max*100);
-        const hired=pct>=60;
-        return`<div class="card" style="margin-bottom:14px">
+        const overallAvg=scored.reduce((a,s)=>a+s.avg,0)/scored.length;
+        const pct=Math.round(overallAvg/5*100);
+        const hired=overallAvg>=3.0;
+        return`<div class="card" style="margin-bottom:14px" id="score-sidebar-${c.id}">
           <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Interview Score</div>
-          ${scored.map(s=>`
+          ${scored.map(s=>{const sc=STAGE_C[s.stage]||'#4F46E5';return`
             <div style="margin-bottom:10px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
                 <span style="font-size:11px;color:var(--muted)">${s.stage}</span>
-                <span style="font-size:12px;font-weight:700">${s.score}/25</span>
+                <span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span>
               </div>
               <div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden">
-                <div style="height:100%;border-radius:3px;background:${s.score>=15?'#16A34A':s.score>=10?'#CA8A04':'#DC2626'};width:${Math.round(s.score/25*100)}%"></div>
+                <div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div>
               </div>
-            </div>`).join('')}
+            </div>`;}).join('')}
           <div style="height:1px;background:var(--border);margin:12px 0"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:12px;font-weight:600">Total</span>
-            <span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${total}/${max}</span>
+            <span style="font-size:12px;font-weight:600">Overall Average</span>
+            <span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${overallAvg.toFixed(1)}/5</span>
           </div>
           <div style="height:8px;border-radius:5px;background:#F3F4F6;overflow:hidden;margin-bottom:10px">
             <div style="height:100%;border-radius:5px;background:${hired?'#16A34A':'#DC2626'};width:${pct}%;transition:width .5s"></div>
@@ -1536,7 +1516,7 @@ function renderProfile(){
             <span style="font-size:18px;font-weight:900;color:${hired?'#16A34A':'#DC2626'}">${pct}%</span>
             <span class="badge" style="background:${hired?'#F0FDF4':'#FEF2F2'};color:${hired?'#16A34A':'#DC2626'};font-size:12px;padding:5px 12px">${hired?'✅ Hire':'❌ Do Not Hire'}</span>
           </div>
-          <div style="font-size:10px;color:var(--muted)">Min. 60% required · ${FB_STAGES.length-scored.length} round${FB_STAGES.length-scored.length!==1?'s':''} pending</div>
+          <div style="font-size:10px;color:var(--muted)">Min. 60% (avg ≥ 3.0) · ${FB_STAGES.length-scored.length} round${FB_STAGES.length-scored.length!==1?'s':''} pending</div>
         </div>`;
       })()}
       <div class="card" style="margin-bottom:14px">
@@ -1545,7 +1525,6 @@ function renderProfile(){
           ${c.li?`<a href="${c.li}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">💼 LinkedIn</a>`:''}
           ${c.cv?`<a href="${c.cv}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;justify-content:center">📄 Resume</a>`:''}
           <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="scheduleInterview('${c.id}')">📅 Schedule</button>
-          <button class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:none;justify-content:center" onclick="showFBModal('${c.id}')">+ Add Feedback</button>
         </div>
       </div>
       <div class="card" style="margin-bottom:14px">
@@ -1566,11 +1545,11 @@ function renderProfile(){
         </div>`).join('')}
       </div>
       ${(()=>{
-        const sc=FB_STAGES.map(st=>{const x=cfb.filter(f=>f.stage===st&&f.score!=null);return x.length?x[x.length-1].score:null;});
+        const sc=FB_STAGES.map(st=>getStageAvg(c.id,st));
         if(!sc.some(v=>v!=null))return'';
         return`<div class="card" style="margin-top:14px">
           <div style="font-size:13px;font-weight:700;margin-bottom:4px">📊 Score Chart</div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Per round · out of 25 · 60% threshold = 15</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Per round · avg out of 5 · threshold = 3.0</div>
           <div style="position:relative;height:180px"><canvas id="sc-chart-${c.id}"></canvas></div>
         </div>`;
       })()}
@@ -1581,20 +1560,19 @@ function renderProfile(){
 
 function initScoreChart(cid){
   const canvas=document.getElementById(`sc-chart-${cid}`);if(!canvas)return;
-  const cfb=feedback.filter(f=>f.cid===cid);
   const shortL=['Behavioral','Discussion','Technical','Final'];
-  const scores=FB_STAGES.map(st=>{const x=cfb.filter(f=>f.stage===st&&f.score!=null);return x.length?x[x.length-1].score:null;});
+  const scores=FB_STAGES.map(st=>getStageAvg(cid,st));
   if(!scores.some(v=>v!=null))return;
   const data=scores.map(v=>v??0);
-  const barColors=data.map(v=>v===0?'#E5E7EB':v>=15?'#16A34A99':v>=10?'#CA8A0499':'#DC262699');
-  const borderColors=data.map(v=>v===0?'#D1D5DB':v>=15?'#16A34A':v>=10?'#CA8A04':'#DC2626');
+  const barColors=data.map(v=>v===0?'#E5E7EB':v>=3?'#16A34A99':v>=2?'#CA8A0499':'#DC262699');
+  const borderColors=data.map(v=>v===0?'#D1D5DB':v>=3?'#16A34A':v>=2?'#CA8A04':'#DC2626');
   new Chart(canvas,{
     type:'bar',
     data:{
       labels:shortL,
       datasets:[
         {label:'Score',data,backgroundColor:barColors,borderColor:borderColors,borderWidth:2,borderRadius:8,borderSkipped:false},
-        {label:'Min (60%)',data:[15,15,15,15],type:'line',borderColor:'#EF444488',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0}
+        {label:'Min (60%)',data:[3,3,3,3],type:'line',borderColor:'#EF444488',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0}
       ]
     },
     options:{
@@ -1603,11 +1581,11 @@ function initScoreChart(cid){
       plugins:{
         legend:{display:false},
         tooltip:{backgroundColor:'#1F2937',titleColor:'#F9FAFB',bodyColor:'#D1D5DB',padding:8,cornerRadius:6,
-          callbacks:{label:ctx=>ctx.dataset.label==='Min (60%)'?'Min threshold: 15/25':`Score: ${ctx.parsed.y}/25 (${Math.round(ctx.parsed.y/25*100)}%)`}}
+          callbacks:{label:ctx=>ctx.dataset.label==='Min (60%)'?'Min threshold: 3.0/5':`Avg: ${ctx.parsed.y.toFixed(1)}/5 (${Math.round(ctx.parsed.y/5*100)}%)`}}
       },
       scales:{
-        y:{min:0,max:25,grid:{color:'#F3F4F6'},ticks:{stepSize:5,color:'#9CA3AF',font:{size:10}},
-          afterDataLimits:scale=>{scale.max=25;}},
+        y:{min:0,max:5,grid:{color:'#F3F4F6'},ticks:{stepSize:1,color:'#9CA3AF',font:{size:10}},
+          afterDataLimits:scale=>{scale.max=5;}},
         x:{grid:{display:false},ticks:{color:'#374151',font:{size:11,weight:'600'}}}
       }
     }
@@ -1646,6 +1624,188 @@ function saveNote(cid){
   if(lbl){lbl.textContent='Saved';lbl.style.color='#16A34A';}
   else{const h=el.closest('.card').querySelector('div');if(h){const s=document.createElement('span');s.style.cssText='font-size:10px;color:#16A34A';s.textContent='Saved';h.appendChild(s);}}
 }
+// ── COMPETENCY FEEDBACK ───────────────────────────────────────────
+function initFBDraft(cid){
+  if(!_fbDraft[cid])_fbDraft[cid]={};
+  FB_STAGES.forEach(stage=>{
+    if(_fbDraft[cid][stage])return;
+    const existing=feedback.filter(f=>f.cid===cid&&f.stage===stage).sort((a,b)=>a.on>b.on?-1:1)[0];
+    if(existing?.competencies?.length){
+      _fbDraft[cid][stage]=existing.competencies.map(c=>({...c}));
+    } else {
+      _fbDraft[cid][stage]=(FB_COMPETENCIES[stage]||[]).map((name,i)=>({id:'cp'+i+stage.replace(/ /g,''),name,score:null,note:''}));
+    }
+  });
+}
+function saveFBDraft(cid,stage){
+  const comps=(_fbDraft[cid]||{})[stage]||[];
+  const reviewer=S.user?.name||'Unknown';
+  const today=new Date().toISOString().split('T')[0];
+  const idx=feedback.findIndex(f=>f.cid===cid&&f.stage===stage&&f.reviewer===reviewer);
+  const scored=comps.filter(c=>c.score!=null);
+  const avg=scored.length?scored.reduce((a,c)=>a+c.score,0)/scored.length:null;
+  const entry={id:idx>=0?feedback[idx].id:'f'+Date.now(),cid,stage,reviewer,on:today,competencies:comps,text:comps.filter(c=>c.note).map(c=>`${c.name}: ${c.note}`).join('\n'),score:avg?Math.round(avg*5):null};
+  if(idx>=0){feedback=feedback.map((f,i)=>i===idx?entry:f);}else{feedback=[...feedback,entry];}
+  sbSave('feedback',feedback);
+}
+function getStageAvg(cid,stage){
+  const draft=(_fbDraft[cid]||{})[stage];
+  if(draft){const sc=draft.filter(c=>c.score!=null);return sc.length?sc.reduce((a,c)=>a+c.score,0)/sc.length:null;}
+  const cfb=feedback.filter(f=>f.cid===cid&&f.stage===stage);
+  const withC=cfb.filter(f=>f.competencies?.length).slice(-1)[0];
+  if(withC){const sc=withC.competencies.filter(c=>c.score!=null);return sc.length?sc.reduce((a,c)=>a+c.score,0)/sc.length:null;}
+  const withS=cfb.filter(f=>f.score!=null).slice(-1)[0];
+  return withS?withS.score/5:null;
+}
+function renderFBSection(c){
+  initFBDraft(c.id);
+  return`<div class="card" id="fb-section">
+    <div style="font-size:14px;font-weight:700;margin-bottom:16px">Interview Feedback</div>
+    ${FB_STAGES.map(stage=>renderFBRound(c.id,stage)).join('')}
+  </div>`;
+}
+function renderFBRound(cid,stage){
+  const comps=(_fbDraft[cid]||{})[stage]||[];
+  const sc=STAGE_C[stage]||'#4F46E5';
+  const scored=comps.filter(c=>c.score!=null);
+  const sum=scored.reduce((a,c)=>a+c.score,0);
+  const avg=scored.length?sum/scored.length:0;
+  const sk=stage.replace(/ /g,'_');
+  return`<div id="fb-round-${cid}-${sk}" style="margin-bottom:14px;border:1px solid ${sc}30;border-radius:10px;overflow:hidden">
+    <div style="background:${sc}12;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${sc}20">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${sc};flex-shrink:0"></div>
+        <span style="font-size:13px;font-weight:700">${stage}</span>
+      </div>
+      ${scored.length?`<span style="font-size:11px;font-weight:700;color:${sc};background:${sc}20;padding:3px 10px;border-radius:20px">Avg ${avg.toFixed(1)}/5</span>`:'<span style="font-size:11px;color:var(--muted)">Not scored yet</span>'}
+    </div>
+    <div style="padding:12px 16px">
+      ${comps.length
+        ?`<table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:5px 4px;font-size:10px;font-weight:600;color:var(--muted)">Competency</th>
+            <th style="width:44px"></th>
+            <th style="text-align:center;padding:5px 4px;font-size:10px;font-weight:600;color:var(--muted);width:58px">Score</th>
+            <th style="text-align:left;padding:5px 4px;font-size:10px;font-weight:600;color:var(--muted);width:120px">Verdict</th>
+            <th style="text-align:left;padding:5px 4px;font-size:10px;font-weight:600;color:var(--muted)">Note</th>
+          </tr></thead>
+          <tbody>${comps.map((comp,idx)=>renderCompRow(cid,stage,comp,idx)).join('')}</tbody>
+        </table>`
+        :`<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:12px">No competencies added yet. Use '+ Add Competency' to begin.</div>`}
+      ${scored.length?`<div style="margin-top:12px;padding:8px 12px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted)">Round Score:</span>
+        <span style="font-size:13px;font-weight:800;color:var(--text)">${sum} / ${scored.length*5}</span>
+        <span style="color:#D1D5DB">|</span>
+        <span style="font-size:11px;color:var(--muted)">Average:</span>
+        <span style="font-size:13px;font-weight:800;color:${sc}">${avg.toFixed(1)} / 5</span>
+        <span style="font-size:11px;color:var(--muted)">(${scored.length} of ${comps.length} scored)</span>
+      </div>`:''}
+      <button onclick="addCompRow('${cid}','${stage}')" style="margin-top:10px;width:100%;background:none;border:1.5px dashed ${sc}50;color:${sc};padding:7px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">+ Add Competency</button>
+    </div>
+  </div>`;
+}
+function renderCompRow(cid,stage,comp,idx){
+  const verdict=comp.score?VERDICT_MAP[comp.score]:null;
+  const sk=stage.replace(/ /g,'_');
+  return`<tr style="border-bottom:1px solid #F3F4F6">
+    <td style="padding:7px 4px"><span id="cn-${cid}-${sk}-${idx}" style="font-size:12px;font-weight:500;color:var(--text)">${comp.name}</span></td>
+    <td style="padding:7px 2px;white-space:nowrap">
+      <button onclick="editCompName('${cid}','${stage}',${idx})" style="background:none;border:none;cursor:pointer;padding:2px 3px;font-size:11px;color:var(--muted)" title="Edit">✏️</button>
+      <button onclick="deleteCompRow('${cid}','${stage}',${idx})" style="background:none;border:none;cursor:pointer;padding:2px 3px;font-size:11px;color:var(--muted)" title="Delete">🗑️</button>
+    </td>
+    <td style="padding:7px 4px;text-align:center">
+      <select onchange="updateCompScore('${cid}','${stage}',${idx},this.value)" style="width:56px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
+        <option value="">—</option>
+        ${[1,2,3,4,5].map(n=>`<option value="${n}"${comp.score===n?' selected':''}>${n}</option>`).join('')}
+      </select>
+    </td>
+    <td style="padding:7px 4px">
+      ${verdict?`<span style="background:${verdict.bg};color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">${verdict.label}</span>`:'<span style="font-size:11px;color:#D1D5DB">—</span>'}
+    </td>
+    <td style="padding:7px 4px">
+      <input type="text" value="${(comp.note||'').replace(/"/g,'&quot;')}" placeholder="Add note…" onblur="updateCompNote('${cid}','${stage}',${idx},this.value)" style="width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text);background:#FAFAFA">
+    </td>
+  </tr>`;
+}
+function addCompRow(cid,stage){
+  if(!_fbDraft[cid])_fbDraft[cid]={};
+  if(!_fbDraft[cid][stage])_fbDraft[cid][stage]=[];
+  _fbDraft[cid][stage].push({id:'cp'+Date.now(),name:'New Competency',score:null,note:''});
+  saveFBDraft(cid,stage);
+  const newIdx=_fbDraft[cid][stage].length-1;
+  refreshFBRound(cid,stage);
+  setTimeout(()=>editCompName(cid,stage,newIdx),60);
+}
+function deleteCompRow(cid,stage,idx){
+  if(!confirm('Delete this competency?'))return;
+  _fbDraft[cid][stage].splice(idx,1);
+  saveFBDraft(cid,stage);
+  refreshFBRound(cid,stage);
+}
+function editCompName(cid,stage,idx){
+  const sk=stage.replace(/ /g,'_');
+  const el=document.getElementById(`cn-${cid}-${sk}-${idx}`);
+  if(!el)return;
+  const cur=el.textContent;
+  el.outerHTML=`<input id="cn-inp-${cid}-${sk}-${idx}" type="text" value="${cur.replace(/"/g,'&quot;')}" style="font-size:12px;font-weight:500;border:1px solid #4F46E5;border-radius:4px;padding:2px 6px;outline:none;width:100%" onblur="saveCompName('${cid}','${stage}',${idx},this.value)" onkeydown="if(event.key==='Enter')this.blur()">`;
+  setTimeout(()=>{const i=document.getElementById(`cn-inp-${cid}-${sk}-${idx}`);if(i){i.focus();i.select();}},10);
+}
+function saveCompName(cid,stage,idx,val){
+  if(!_fbDraft[cid]?.[stage])return;
+  _fbDraft[cid][stage][idx].name=val.trim()||'Unnamed';
+  saveFBDraft(cid,stage);
+  refreshFBRound(cid,stage);
+}
+function updateCompScore(cid,stage,idx,val){
+  if(!_fbDraft[cid]?.[stage])return;
+  _fbDraft[cid][stage][idx].score=val?parseInt(val):null;
+  saveFBDraft(cid,stage);
+  refreshFBRound(cid,stage);
+  refreshScoreSidebar(cid);
+}
+function updateCompNote(cid,stage,idx,val){
+  if(!_fbDraft[cid]?.[stage])return;
+  _fbDraft[cid][stage][idx].note=val;
+  saveFBDraft(cid,stage);
+}
+function refreshFBRound(cid,stage){
+  const sk=stage.replace(/ /g,'_');
+  const el=document.getElementById(`fb-round-${cid}-${sk}`);
+  if(!el){refreshFBSection(cid);return;}
+  const tmp=document.createElement('div');
+  tmp.innerHTML=renderFBRound(cid,stage);
+  el.replaceWith(tmp.firstElementChild);
+}
+function refreshFBSection(cid){
+  const el=document.getElementById('fb-section');if(!el)return;
+  const c=candidates.find(x=>x.id===cid);if(!c)return;
+  const tmp=document.createElement('div');
+  tmp.innerHTML=renderFBSection(c);
+  el.replaceWith(tmp.firstElementChild);
+}
+function refreshScoreSidebar(cid){
+  const el=document.getElementById(`score-sidebar-${cid}`);if(!el)return;
+  const c=candidates.find(x=>x.id===cid);if(!c)return;
+  const cfb=feedback.filter(f=>f.cid===cid);
+  const scored=FB_STAGES.map(st=>{const avg=getStageAvg(cid,st);return avg!=null?{stage:st,avg}:null;}).filter(Boolean);
+  if(!scored.length){el.style.display='none';return;}
+  const overallAvg=scored.reduce((a,s)=>a+s.avg,0)/scored.length;
+  const pct=Math.round(overallAvg/5*100);
+  const hired=overallAvg>=3.0;
+  const tmp=document.createElement('div');
+  tmp.innerHTML=`<div class="card" style="margin-bottom:14px" id="score-sidebar-${cid}">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Interview Score</div>
+    ${scored.map(s=>{const sc=STAGE_C[s.stage]||'#4F46E5';return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">${s.stage}</span><span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span></div><div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div></div></div>`;}).join('')}
+    <div style="height:1px;background:var(--border);margin:12px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:12px;font-weight:600">Overall Average</span><span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${overallAvg.toFixed(1)}/5</span></div>
+    <div style="height:8px;border-radius:5px;background:#F3F4F6;overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:5px;background:${hired?'#16A34A':'#DC2626'};width:${pct}%;transition:width .5s"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:18px;font-weight:900;color:${hired?'#16A34A':'#DC2626'}">${pct}%</span><span class="badge" style="background:${hired?'#F0FDF4':'#FEF2F2'};color:${hired?'#16A34A':'#DC2626'};font-size:12px;padding:5px 12px">${hired?'✅ Hire':'❌ Do Not Hire'}</span></div>
+    <div style="font-size:10px;color:var(--muted)">Min. 60% (avg ≥ 3.0) · ${FB_STAGES.length-scored.length} round${FB_STAGES.length-scored.length!==1?'s':''} pending</div>
+  </div>`;
+  el.replaceWith(tmp.firstElementChild);
+  setTimeout(()=>initScoreChart(cid),50);
+}
+
 function submitFB(cid,stage){
   const key=`fbt-${cid}-${stage.replace(/ /g,'_')}`;
   const scoreKey=`fbsc-${cid}-${stage.replace(/ /g,'_')}`;
