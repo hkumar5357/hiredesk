@@ -1649,7 +1649,8 @@ function saveFBDraft(cid,stage){
   const idx=feedback.findIndex(f=>f.cid===cid&&f.stage===stage&&f.reviewer===reviewer);
   const scored=comps.filter(c=>c.score!=null);
   const avg=scored.length?scored.reduce((a,c)=>a+c.score,0)/scored.length:null;
-  const entry={id:idx>=0?feedback[idx].id:'f'+Date.now(),cid,stage,reviewer,on:today,competencies:comps,text:comps.filter(c=>c.note).map(c=>`${c.name}: ${c.note}`).join('\n'),score:avg?Math.round(avg*5):null,hire};
+  // score stored as raw 1–5 average (new competency system)
+  const entry={id:idx>=0?feedback[idx].id:'f'+Date.now(),cid,stage,reviewer,on:today,competencies:comps,text:comps.filter(c=>c.note).map(c=>`${c.name}: ${c.note}`).join('\n'),score:avg??null,hire};
   if(idx>=0){feedback=feedback.map((f,i)=>i===idx?entry:f);}else{feedback=[...feedback,entry];}
   sbSave('feedback',feedback);
 }
@@ -1675,7 +1676,9 @@ function getStageAvg(cid,stage){
   const withC=cfb.filter(f=>f.competencies?.length).slice(-1)[0];
   if(withC){const sc=withC.competencies.filter(c=>c.score!=null);return sc.length?sc.reduce((a,c)=>a+c.score,0)/sc.length:null;}
   const withS=cfb.filter(f=>f.score!=null).slice(-1)[0];
-  return withS?withS.score/5:null;
+  if(!withS)return null;
+  // Old data: score was 0–25 (divide by 5). New data: score is raw 1–5 avg.
+  return withS.score>5?withS.score/5:withS.score;
 }
 function renderFBSection(c){
   initFBDraft(c.id);
