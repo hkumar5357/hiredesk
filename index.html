@@ -262,7 +262,7 @@ const _onboardedHires=[
 ];
 let onboardedHires=[];
 
-let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',dashCard:null,dashRoleFilter:'all',dashStageFilter:'all',dashStatusFilter:'all',dashRoundFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
+let S={page:'dashboard',view:'roles',rid:null,cid:null,pipCid:null,pipRid:null,statusFilter:'all',candSearch:'',dashCard:null,dashRoleFilter:'all',dashStageFilter:'all',dashStatusFilter:'all',dashRoundFilter:'all',user:JSON.parse(localStorage.getItem('hd_u')||'null')};
 let _dashChart=null;
 let _dashClickedLabel=null;
 
@@ -460,7 +460,6 @@ function renderApp(){
     {id:'dashboard',label:'Dashboard',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'},
     {id:'openRoles',label:'Open Roles',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'},
     {id:'applications',label:'Applications',adminOnly:true,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
-    {id:'pipeline',label:'Pipeline',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'},
     {id:'onboarded',label:'Selected Candidates',adminOnly:false,icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',badge:'New'},
   ].filter(n=>!n.adminOnly||isAdmin);
 
@@ -1401,10 +1400,11 @@ function renderAppCands(){
   let rc=candidates.filter(c=>c.rid===S.rid);
   if(S.statusFilter==='offer')rc=rc.filter(c=>c.stage==='Offer Letter Rolled Out');
   else if(S.statusFilter!=='all')rc=rc.filter(c=>c.status===S.statusFilter);
+  if(S.candSearch)rc=rc.filter(c=>c.name.toLowerCase().includes(S.candSearch.toLowerCase()));
   rc=rc.slice().sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('mc').innerHTML=`
   <div class="bc">
-    <a onclick="S.view='roles';renderApps()">Applications</a>
+    <a onclick="S.view='roles';S.candSearch='';renderApps()">Applications</a>
     <span style="color:#D1D5DB">›</span>
     <span style="color:var(--text);font-weight:600">${role?.title||''}</span>
   </div>
@@ -1414,9 +1414,16 @@ function renderAppCands(){
     </div>
     <button class="btn btn-primary btn-sm" onclick="showAddCand('${S.rid}')">+ Add Candidate</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
     ${[['all','All','#6B7280'],['yellow','Pipeline','#CA8A04'],['blue','In Process','#2563EB'],['green','Selected','#16A34A'],['offer','Offer Letter Rolled Out','#16A34A'],['red','Rejected','#DC2626']].map(([v,l,c])=>`
     <button onclick="S.statusFilter='${v}';renderApps()" style="padding:5px 14px;border-radius:20px;border:1px solid ${S.statusFilter===v?c+'66':'var(--border)'};cursor:pointer;font-size:12px;font-weight:600;background:${S.statusFilter===v?c+'18':'transparent'};color:${S.statusFilter===v?c:'var(--muted)'};">${l}</button>`).join('')}
+  </div>
+  <div style="display:flex;justify-content:center;margin-bottom:20px">
+    <div style="position:relative;width:100%;max-width:420px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" value="${S.candSearch}" placeholder="Search candidates…" oninput="S.candSearch=this.value;renderApps()" style="width:100%;padding:9px 12px 9px 36px;border:1.5px solid ${S.candSearch?'#4F46E5':'var(--border)'};border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;box-sizing:border-box;transition:border-color .2s">
+      ${S.candSearch?`<button onclick="S.candSearch='';renderApps()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:16px;line-height:1;padding:2px">×</button>`:''}
+    </div>
   </div>
   ${rc.length===0?`<div class="empty"><div style="font-size:32px;margin-bottom:8px">👤</div>No candidates match this filter</div>`:`
   <div class="cand-grid">
