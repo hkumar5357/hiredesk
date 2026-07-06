@@ -230,6 +230,7 @@ const _defaultCandidates=[
 
 let candidates=[];
 let feedback=[];
+let attachments=[];
 let notifications=[];
 const _defaultSchedule=[];
 let schedule=[];
@@ -361,7 +362,7 @@ function sbSave(storeKey,val){
     .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
 }
 async function loadAllData(){
-  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires'];
+  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments'];
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
@@ -387,6 +388,9 @@ async function loadAllData(){
   // Notifications
   notifications=map['notifications']&&Array.isArray(map['notifications'])?map['notifications']:[];
   if(!map['notifications'])sbSave('notifications',notifications);
+  // Attachments
+  attachments=map['fb_attachments']&&Array.isArray(map['fb_attachments'])?map['fb_attachments']:[];
+  if(!map['fb_attachments'])sbSave('fb_attachments',attachments);
   // Onboarded hires — merge defaults so new default entries propagate
   const storedOB=map['onboarded_hires'];
   if(storedOB&&Array.isArray(storedOB)){
@@ -1713,6 +1717,18 @@ function renderFBRound(cid,stage){
         <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px">Feedback Note</div>
         <textarea rows="4" placeholder="Add overall feedback note for this round…" onblur="saveRoundNote('${cid}','${stage}',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text);background:#FAFAFA;resize:vertical;box-sizing:border-box">${((_fbNotes[cid]||{})[stage]||'').replace(/</g,'&lt;')}</textarea>
       </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          Interview Files
+        </div>
+        <div id="att-list-${cid}-${sk}">${renderRoundAttachments(cid,stage)}</div>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px dashed #D1D5DB;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;transition:border-color .2s" onmouseover="this.style.borderColor='${sc}';this.style.color='${sc}'" onmouseout="this.style.borderColor='#D1D5DB';this.style.color='var(--muted)'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Attach file
+          <input type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" style="display:none" onchange="attachFBFile('${cid}','${stage}','${sk}',this)">
+        </label>
+      </div>
     </div>
   </div>`;
 }
@@ -1776,6 +1792,52 @@ function saveRoundNote(cid,stage,val){
   if(!_fbNotes[cid])_fbNotes[cid]={};
   _fbNotes[cid][stage]=val;
   saveFBDraft(cid,stage);
+}
+function _fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+function _fileIcon(type){
+  if(!type)return'📄';
+  if(type.includes('pdf'))return'📕';
+  if(type.includes('word')||type.includes('doc'))return'📘';
+  if(type.includes('sheet')||type.includes('excel')||type.includes('xls'))return'📗';
+  if(type.includes('presentation')||type.includes('ppt'))return'📙';
+  if(type.includes('image'))return'🖼️';
+  return'📄';
+}
+function renderRoundAttachments(cid,stage){
+  const atts=attachments.filter(a=>a.cid===cid&&a.stage===stage);
+  if(!atts.length)return'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">No files attached yet.</div>';
+  return atts.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#F9FAFB;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+      <span style="font-size:18px;flex-shrink:0">${_fileIcon(a.type)}</span>
+      <div style="flex:1;min-width:0">
+        <a href="${a.data}" download="${a.name}" style="font-size:12px;font-weight:600;color:#4F46E5;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name}">${a.name}</a>
+        <div style="font-size:10px;color:var(--muted)">${a.reviewer} · ${_fmtSize(a.size)} · ${a.on}</div>
+      </div>
+      <button onclick="removeAttachment('${a.id}','${cid}','${stage}','${stage.replace(/ /g,'_')}')" title="Remove" style="background:none;border:none;cursor:pointer;padding:3px 6px;font-size:16px;color:#D1D5DB;line-height:1" onmouseover="this.style.color='#DC2626'" onmouseout="this.style.color='#D1D5DB'">×</button>
+    </div>`).join('');
+}
+function attachFBFile(cid,stage,sk,input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>10*1024*1024){toast('File too large — max 10 MB','err');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const att={id:'att'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',name:file.name,type:file.type,size:file.size,data:e.target.result,on:new Date().toISOString().split('T')[0]};
+    attachments=[...attachments,att];
+    sbSave('fb_attachments',attachments);
+    const el=document.getElementById(`att-list-${cid}-${sk}`);
+    if(el)el.innerHTML=renderRoundAttachments(cid,stage);
+    toast('File attached ✓');
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function removeAttachment(id,cid,stage,sk){
+  if(!confirm('Remove this file?'))return;
+  attachments=attachments.filter(a=>a.id!==id);
+  sbSave('fb_attachments',attachments);
+  const el=document.getElementById(`att-list-${cid}-${sk}`);
+  if(el)el.innerHTML=renderRoundAttachments(cid,stage);
+  toast('File removed');
 }
 function refreshFBRound(cid,stage){
   const sk=stage.replace(/ /g,'_');
