@@ -105,15 +105,32 @@ tr:hover td{background:#F9FAFB}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────
-const STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
-const STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
-const FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
-const FB_COMPETENCIES={
+const _DEFAULT_STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
+const _DEFAULT_STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
+const _DEFAULT_FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
+const _DEFAULT_FB_COMPETENCIES={
   'Behavioral Round':['Seriousness & Role Alignment','Communication & Impact Orientation','AI Adaptability','Continuous Learning Mindset','Collaboration & Leadership Mindset','Technical Competency (if required)'],
   'Discussion Round':['Excitement for Role','AI-First Engineering','Frontend Depth','Technical Depth','Documentation Mindset','Systems Builder','Curiosity','Communication'],
   'Technical Round':['Ownership & Follow-Through','Documentation-Before-Code Mindset','Ambiguity & Cross-Functional Collaboration','Mission Alignment & Purpose','Reliability Under Pressure'],
   'Final Discussion':[]
 };
+let STAGES=[..._DEFAULT_STAGES];
+let STAGE_C={..._DEFAULT_STAGE_C};
+let FB_STAGES=[..._DEFAULT_FB_STAGES];
+let FB_COMPETENCIES=JSON.parse(JSON.stringify(_DEFAULT_FB_COMPETENCIES));
+function applyStageNames(newNames){
+  if(!newNames||newNames.length!==_DEFAULT_STAGES.length)return;
+  STAGES=[..._DEFAULT_STAGES];STAGE_C={..._DEFAULT_STAGE_C};FB_STAGES=[..._DEFAULT_FB_STAGES];FB_COMPETENCIES=JSON.parse(JSON.stringify(_DEFAULT_FB_COMPETENCIES));
+  newNames.forEach((newName,i)=>{
+    const oldName=_DEFAULT_STAGES[i];
+    if(newName&&newName.trim()&&newName!==oldName){
+      FB_STAGES=FB_STAGES.map(s=>s===oldName?newName:s);
+      if(FB_COMPETENCIES[oldName]!==undefined){FB_COMPETENCIES[newName]=FB_COMPETENCIES[oldName];delete FB_COMPETENCIES[oldName];}
+      STAGE_C[newName]=STAGE_C[oldName];delete STAGE_C[oldName];
+      STAGES[i]=newName;
+    }
+  });
+}
 const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},2:{label:'Concern',bg:'#EA580C'},3:{label:'Mixed',bg:'#CA8A04'},4:{label:'Promising',bg:'#2563EB'},5:{label:'Strong Yes',bg:'#16A34A'}};
 let _fbDraft={};
 let _fbNotes={};
@@ -367,7 +384,7 @@ function sbSave(storeKey,val){
     .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
 }
 async function loadAllData(){
-  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments','hd_custom_rounds'];
+  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments','hd_custom_rounds','stage_names'];
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
@@ -397,6 +414,8 @@ async function loadAllData(){
   // Custom interview rounds
   customRounds=map['hd_custom_rounds']&&Array.isArray(map['hd_custom_rounds'])?map['hd_custom_rounds']:[];
   if(!map['hd_custom_rounds'])sbSave('hd_custom_rounds',customRounds);
+  // Stage names — apply custom round names if saved
+  if(map['stage_names']&&Array.isArray(map['stage_names']))applyStageNames(map['stage_names']);
   // Onboarded hires — merge defaults so new default entries propagate
   const storedOB=map['onboarded_hires'];
   if(storedOB&&Array.isArray(storedOB)){
@@ -423,6 +442,7 @@ function subscribeRealtime(){
       else if(k==='feedback')feedback=d;
       else if(k==='notifications'){notifications=d;updateBell();}
       else if(k==='onboarded_hires')onboardedHires=d;
+      else if(k==='stage_names'){applyStageNames(d);}
       if(document.getElementById('mc'))renderPage();
     })
     .subscribe();
@@ -497,6 +517,7 @@ function renderApp(){
       <nav class="sb-nav" id="sb-nav">
         ${navs.map(n=>`<div class="nav-item${S.page===n.id?' active':''}" onclick="nav('${n.id}')" id="ni-${n.id}">${n.icon}<span>${n.label}</span>${n.badge?`<span style="margin-left:auto;font-size:9px;font-weight:700;background:#16A34A;color:#fff;padding:2px 6px;border-radius:10px">${n.badge}</span>`:''}</div>`).join('')}
         ${isAdmin?`<div class="nav-item" onclick="showAddCand()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/></svg><span>Add Candidate</span></div>`:''}
+        ${isAdmin?`<div class="nav-item" onclick="showEditRounds()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/><path d="M4.93 19.07l-1.41 1.41"/><path d="M19.07 19.07l-1.41-1.41"/><path d="M4.93 4.93l1.41 1.41"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg><span>Edit Round Names</span></div>`:''}
       </nav>
       <div class="sb-footer">
         <div class="user-av">${ini(S.user?.name||'U')}</div>
@@ -2264,6 +2285,41 @@ function submitFBPip(cid,stage){
   }
   closeModal();
   renderPipelineProfile();
+}
+
+// ── EDIT ROUND NAMES ──────────────────────────────────────────────
+function showEditRounds(){
+  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Edit Interview Round Names</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Rename rounds across all jobs and candidates. Changes apply immediately.</div>
+    ${STAGES.map((s,i)=>`<div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Round ${i+1}</label>
+      <input id="rn-${i}" class="input" value="${s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box">
+    </div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRoundNames()">Save Changes</button>
+    </div>`);
+}
+function saveRoundNames(){
+  const newNames=STAGES.map((_,i)=>(document.getElementById('rn-'+i)?.value||'').trim());
+  if(newNames.some(n=>!n)){toast('All round names are required','err');return;}
+  if(new Set(newNames).size!==newNames.length){toast('Round names must be unique','err');return;}
+  newNames.forEach((newName,i)=>{
+    const oldName=STAGES[i];
+    if(newName!==oldName){
+      candidates=candidates.map(c=>c.stage===oldName?{...c,stage:newName}:c);
+      feedback=feedback.map(f=>f.stage===oldName?{...f,stage:newName}:f);
+      schedule=schedule.map(s=>s.round===oldName?{...s,round:newName}:s);
+    }
+  });
+  applyStageNames(newNames);
+  sbSave('stage_names',newNames);
+  sbSave('candidates',candidates);
+  sbSave('feedback',feedback);
+  sbSave('schedule',schedule);
+  closeModal();
+  toast('Round names updated ✓');
+  renderPage();
 }
 
 // ── ADD CANDIDATE ─────────────────────────────────────────────────
