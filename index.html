@@ -118,6 +118,10 @@ const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},2:{label:'Concern',bg
 let _fbDraft={};
 let _fbNotes={};
 let _fbMeta={};
+const _CR_COLORS=['#10B981','#F97316','#6366F1','#14B8A6','#D946EF','#84CC16'];
+function getRoleFBStages(rid){return[...FB_STAGES,...customRounds.filter(r=>r.rid===rid).map(r=>r.name)];}
+function getRoleStages(rid){return[...STAGES,...customRounds.filter(r=>r.rid===rid).map(r=>r.name)];}
+function getCustomRoundColor(rid){const idx=customRounds.filter(r=>r.rid===rid).length;return _CR_COLORS[idx%_CR_COLORS.length];}
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -231,6 +235,7 @@ const _defaultCandidates=[
 let candidates=[];
 let feedback=[];
 let attachments=[];
+let customRounds=[];
 let notifications=[];
 const _defaultSchedule=[];
 let schedule=[];
@@ -362,7 +367,7 @@ function sbSave(storeKey,val){
     .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
 }
 async function loadAllData(){
-  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments'];
+  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments','hd_custom_rounds'];
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
@@ -389,6 +394,9 @@ async function loadAllData(){
   // Attachments
   attachments=map['fb_attachments']&&Array.isArray(map['fb_attachments'])?map['fb_attachments']:[];
   if(!map['fb_attachments'])sbSave('fb_attachments',attachments);
+  // Custom interview rounds
+  customRounds=map['hd_custom_rounds']&&Array.isArray(map['hd_custom_rounds'])?map['hd_custom_rounds']:[];
+  if(!map['hd_custom_rounds'])sbSave('hd_custom_rounds',customRounds);
   // Onboarded hires — merge defaults so new default entries propagate
   const storedOB=map['onboarded_hires'];
   if(storedOB&&Array.isArray(storedOB)){
@@ -1228,7 +1236,7 @@ function scheduleInterview(cid){
     <div class="grid2" style="gap:12px;margin-bottom:18px">
       <div><label class="label">Round</label>
         <select id="si-round" class="input">
-          ${STAGES.map(r=>`<option value="${r}" ${(existing?.round||c.stage)===r?'selected':''}>${r}</option>`).join('')}
+          ${getRoleStages(c.rid).map(r=>`<option value="${r}" ${(existing?.round||c.stage)===r?'selected':''}>${r}</option>`).join('')}
         </select>
       </div>
       <div><label class="label">Interviewer</label>
@@ -1496,7 +1504,7 @@ function renderProfile(){
           </div>
           <div><label class="label">Interview Stage</label>
             <select class="input" onchange="updCand('${c.id}','stage',this.value)">
-              ${STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('')}
+              ${getRoleStages(c.rid).map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -1544,19 +1552,22 @@ function renderProfile(){
 
 function initScoreChart(cid){
   const canvas=document.getElementById(`sc-chart-${cid}`);if(!canvas)return;
-  const shortL=['Behavioral','Discussion','Technical','Final'];
-  const scores=FB_STAGES.map(st=>getStageAvg(cid,st));
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const fbStages=getRoleFBStages(rid);
+  const shortL=fbStages.map(st=>st.split(' ')[0]);
+  const scores=fbStages.map(st=>getStageAvg(cid,st));
   if(!scores.some(v=>v!=null))return;
   const data=scores.map(v=>v??0);
   const barColors=data.map(v=>v===0?'#E5E7EB':v>=3?'#16A34A99':v>=2?'#CA8A0499':'#DC262699');
   const borderColors=data.map(v=>v===0?'#D1D5DB':v>=3?'#16A34A':v>=2?'#CA8A04':'#DC2626');
+  const minLine=fbStages.map(()=>3);
   new Chart(canvas,{
     type:'bar',
     data:{
       labels:shortL,
       datasets:[
         {label:'Score',data,backgroundColor:barColors,borderColor:borderColors,borderWidth:2,borderRadius:8,borderSkipped:false},
-        {label:'Min (60%)',data:[3,3,3,3],type:'line',borderColor:'#EF444488',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0}
+        {label:'Min (60%)',data:minLine,type:'line',borderColor:'#EF444488',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0}
       ]
     },
     options:{
@@ -1610,10 +1621,11 @@ function saveNote(cid){
 }
 // ── COMPETENCY FEEDBACK ───────────────────────────────────────────
 function initFBDraft(cid){
+  const rid=candidates.find(x=>x.id===cid)?.rid;
   if(!_fbDraft[cid])_fbDraft[cid]={};
   if(!_fbMeta[cid])_fbMeta[cid]={};
   if(!_fbNotes[cid])_fbNotes[cid]={};
-  FB_STAGES.forEach(stage=>{
+  getRoleFBStages(rid).forEach(stage=>{
     if(!_fbMeta[cid][stage])_fbMeta[cid][stage]={hire:null};
     if(_fbDraft[cid][stage])return;
     const existing=feedback.filter(f=>f.cid===cid&&f.stage===stage).sort((a,b)=>a.on>b.on?-1:1)[0];
@@ -1621,7 +1633,8 @@ function initFBDraft(cid){
       _fbDraft[cid][stage]=existing.competencies.map(c=>({id:c.id,name:c.name,score:c.score??null}));
       if(existing.hire!=null)_fbMeta[cid][stage].hire=existing.hire;
     } else {
-      _fbDraft[cid][stage]=(FB_COMPETENCIES[stage]||[]).map((name,i)=>({id:'cp'+i+stage.replace(/ /g,''),name,score:null}));
+      const cr=customRounds.find(r=>r.rid===rid&&r.name===stage);
+      _fbDraft[cid][stage]=cr?cr.competencies.map((cp,i)=>({id:cp.id||'cp'+i+stage.replace(/ /g,''),name:cp.name,score:null})):(FB_COMPETENCIES[stage]||[]).map((name,i)=>({id:'cp'+i+stage.replace(/ /g,''),name,score:null}));
     }
     _fbNotes[cid][stage]=existing?.text||'';
   });
@@ -1668,15 +1681,18 @@ function getStageAvg(cid,stage){
 }
 function renderFBSection(c){
   initFBDraft(c.id);
+  const stages=getRoleFBStages(c.rid);
   return`<div class="card" id="fb-section">
     <div style="font-size:14px;font-weight:700;margin-bottom:16px">Interview Feedback</div>
-    ${FB_STAGES.map(stage=>renderFBRound(c.id,stage)).join('')}
+    ${stages.map(stage=>renderFBRound(c.id,stage,c.rid)).join('')}
+    ${S.user?.role==='admin'?`<button onclick="openAddRoundModal('${c.rid}','${c.id}')" style="margin-top:4px;width:100%;background:none;border:1.5px dashed #D1D5DB;color:var(--muted);padding:9px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='#4F46E5';this.style.color='#4F46E5'" onmouseout="this.style.borderColor='#D1D5DB';this.style.color='var(--muted)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Add Interview Round</button>`:''}
   </div>`;
 }
-function renderFBRound(cid,stage){
+function renderFBRound(cid,stage,rid){
   const comps=(_fbDraft[cid]||{})[stage]||[];
   const hire=(_fbMeta[cid]||{})[stage]?.hire??null;
-  const sc=STAGE_C[stage]||'#4F46E5';
+  const cr=customRounds.find(r=>r.name===stage&&r.rid===rid);
+  const sc=STAGE_C[stage]||(cr?cr.color:'#4F46E5');
   const scored=comps.filter(c=>c.score!=null);
   const sum=scored.reduce((a,c)=>a+c.score,0);
   const avg=scored.length?sum/scored.length:0;
@@ -1687,8 +1703,9 @@ function renderFBRound(cid,stage){
     <div style="background:${sc}12;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${sc}20">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="width:8px;height:8px;border-radius:50%;background:${sc};flex-shrink:0"></div>
-        <span style="font-size:13px;font-weight:700">${stage}</span>
+        <span id="cr-label-${sk}" style="font-size:13px;font-weight:700">${stage}</span>
         ${hireBadge}
+        ${cr&&S.user?.role==='admin'?`<button onclick="editRoundName('${cr.id}','${rid}','${cid}')" title="Rename round" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:${sc};opacity:.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">✏️</button><button onclick="deleteCustomRound('${cr.id}','${rid}','${cid}')" title="Delete round" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:#DC2626;opacity:.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">🗑️</button>`:''}
       </div>
       ${scored.length?`<span style="font-size:11px;font-weight:700;color:${sc};background:${sc}20;padding:3px 10px;border-radius:20px">Avg ${avg.toFixed(1)}/5</span>`:'<span style="font-size:11px;color:var(--muted)">Not scored yet</span>'}
     </div>
@@ -1765,7 +1782,12 @@ function renderCompRow(cid,stage,comp,idx){
 function addCompRow(cid,stage){
   if(!_fbDraft[cid])_fbDraft[cid]={};
   if(!_fbDraft[cid][stage])_fbDraft[cid][stage]=[];
-  _fbDraft[cid][stage].push({id:'cp'+Date.now(),name:'New Competency',score:null});
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const newComp={id:'cp'+Date.now(),name:'New Competency',score:null};
+  _fbDraft[cid][stage].push(newComp);
+  // sync to customRounds definition so other candidates inherit it
+  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
+  if(crIdx!==-1){customRounds[crIdx].competencies=[...(customRounds[crIdx].competencies||[]),{id:newComp.id,name:newComp.name}];sbSave('hd_custom_rounds',customRounds);}
   saveFBDraft(cid,stage);
   const newIdx=_fbDraft[cid][stage].length-1;
   refreshFBRound(cid,stage);
@@ -1773,7 +1795,12 @@ function addCompRow(cid,stage){
 }
 function deleteCompRow(cid,stage,idx){
   if(!confirm('Delete this competency?'))return;
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const compId=_fbDraft[cid][stage][idx]?.id;
   _fbDraft[cid][stage].splice(idx,1);
+  // sync deletion to customRounds definition
+  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
+  if(crIdx!==-1&&compId){customRounds[crIdx].competencies=customRounds[crIdx].competencies.filter(c=>c.id!==compId);sbSave('hd_custom_rounds',customRounds);}
   saveFBDraft(cid,stage);
   refreshFBRound(cid,stage);
 }
@@ -1787,7 +1814,13 @@ function editCompName(cid,stage,idx){
 }
 function saveCompName(cid,stage,idx,val){
   if(!_fbDraft[cid]?.[stage])return;
-  _fbDraft[cid][stage][idx].name=val.trim()||'Unnamed';
+  const name=val.trim()||'Unnamed';
+  const compId=_fbDraft[cid][stage][idx]?.id;
+  _fbDraft[cid][stage][idx].name=name;
+  // sync rename to customRounds definition
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
+  if(crIdx!==-1&&compId){const ci=customRounds[crIdx].competencies.findIndex(c=>c.id===compId);if(ci!==-1){customRounds[crIdx].competencies[ci].name=name;sbSave('hd_custom_rounds',customRounds);}}
   saveFBDraft(cid,stage);
   refreshFBRound(cid,stage);
 }
@@ -1853,8 +1886,9 @@ function refreshFBRound(cid,stage){
   const sk=stage.replace(/ /g,'_');
   const el=document.getElementById(`fb-round-${cid}-${sk}`);
   if(!el){refreshFBSection(cid);return;}
+  const rid=candidates.find(x=>x.id===cid)?.rid;
   const tmp=document.createElement('div');
-  tmp.innerHTML=renderFBRound(cid,stage);
+  tmp.innerHTML=renderFBRound(cid,stage,rid);
   el.replaceWith(tmp.firstElementChild);
 }
 function refreshFBSection(cid){
@@ -1864,24 +1898,98 @@ function refreshFBSection(cid){
   tmp.innerHTML=renderFBSection(c);
   el.replaceWith(tmp.firstElementChild);
 }
+function openAddRoundModal(rid,cid){
+  document.getElementById('cr-modal-wrap')?.remove();
+  const wrap=document.createElement('div');
+  wrap.id='cr-modal-wrap';
+  wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center';
+  wrap.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px">Add Interview Round</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">This round will appear for all candidates in this job role.</div>
+    <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Round Name *</label>
+    <input id="cr-name-inp" class="input" type="text" placeholder="e.g. Portfolio Review, Case Study…" style="margin-bottom:18px;font-size:13px" onkeydown="if(event.key==='Enter')saveNewRound('${rid}','${cid}')">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('cr-modal-wrap').remove()" style="padding:8px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)">Cancel</button>
+      <button onclick="saveNewRound('${rid}','${cid}')" style="padding:8px 20px;border:none;border-radius:8px;background:#4F46E5;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Add Round</button>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap);
+  setTimeout(()=>document.getElementById('cr-name-inp')?.focus(),50);
+  wrap.addEventListener('click',e=>{if(e.target===wrap)wrap.remove();});
+}
+function saveNewRound(rid,cid){
+  const name=document.getElementById('cr-name-inp')?.value?.trim();
+  if(!name){toast('Enter a round name','err');return;}
+  if(getRoleFBStages(rid).map(s=>s.toLowerCase()).includes(name.toLowerCase())){toast('A round with this name already exists','err');return;}
+  const color=_CR_COLORS[customRounds.filter(r=>r.rid===rid).length%_CR_COLORS.length];
+  const round={id:'cr'+Date.now(),rid,name,color,competencies:[],createdAt:new Date().toISOString().split('T')[0]};
+  customRounds=[...customRounds,round];
+  sbSave('hd_custom_rounds',customRounds);
+  document.getElementById('cr-modal-wrap')?.remove();
+  // Init draft for new stage for this candidate
+  if(_fbDraft[cid]){_fbDraft[cid][name]=[];_fbMeta[cid][name]={hire:null};_fbNotes[cid][name]='';}
+  refreshFBSection(cid);
+  // Update stage dropdown in profile
+  const stSel=document.querySelector(`select[onchange*="updCand('${cid}','stage'"]`);
+  if(stSel){const opt=document.createElement('option');opt.value=name;opt.textContent=name;stSel.appendChild(opt);}
+  toast(`"${name}" round added ✓`);
+}
+function deleteCustomRound(roundId,rid,cid){
+  const round=customRounds.find(r=>r.id===roundId);if(!round)return;
+  if(!confirm(`Delete the "${round.name}" round? All feedback for this round will also be removed.`))return;
+  customRounds=customRounds.filter(r=>r.id!==roundId);
+  feedback=feedback.filter(f=>!(f.cid===cid&&f.stage===round.name)||candidates.filter(c=>c.rid===rid).every(c=>c.id!==f.cid));
+  // Remove feedback for ALL candidates in this role
+  const roleCids=new Set(candidates.filter(c=>c.rid===rid).map(c=>c.id));
+  feedback=feedback.filter(f=>!(roleCids.has(f.cid)&&f.stage===round.name));
+  sbSave('hd_custom_rounds',customRounds);
+  sbSave('feedback',feedback);
+  if(_fbDraft[cid]){delete _fbDraft[cid][round.name];}
+  refreshFBSection(cid);
+  refreshScoreSidebar(cid);
+  toast(`"${round.name}" round deleted`);
+}
+function editRoundName(roundId,rid,cid){
+  const round=customRounds.find(r=>r.id===roundId);if(!round)return;
+  const newName=prompt('Rename round:',round.name)?.trim();
+  if(!newName||newName===round.name)return;
+  if(getRoleFBStages(rid).filter(s=>s!==round.name).map(s=>s.toLowerCase()).includes(newName.toLowerCase())){toast('A round with this name already exists','err');return;}
+  const oldName=round.name;
+  customRounds=customRounds.map(r=>r.id===roundId?{...r,name:newName}:r);
+  // Update all feedback entries for all candidates in this role
+  const roleCids=new Set(candidates.filter(c=>c.rid===rid).map(c=>c.id));
+  feedback=feedback.map(f=>roleCids.has(f.cid)&&f.stage===oldName?{...f,stage:newName}:f);
+  // Update in-memory drafts for current candidate
+  if(_fbDraft[cid]?.[oldName]){_fbDraft[cid][newName]=_fbDraft[cid][oldName];delete _fbDraft[cid][oldName];}
+  if(_fbMeta[cid]?.[oldName]){_fbMeta[cid][newName]=_fbMeta[cid][oldName];delete _fbMeta[cid][oldName];}
+  if(_fbNotes[cid]?.[oldName]){_fbNotes[cid][newName]=_fbNotes[cid][oldName];delete _fbNotes[cid][oldName];}
+  sbSave('hd_custom_rounds',customRounds);
+  sbSave('feedback',feedback);
+  refreshFBSection(cid);
+  toast(`Round renamed to "${newName}" ✓`);
+}
 function renderScoreCard(cid){
-  const scored=FB_STAGES.map(st=>{const avg=getStageAvg(cid,st);return avg!=null?{stage:st,avg}:null;}).filter(Boolean);
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const fbStages=getRoleFBStages(rid);
+  const scored=fbStages.map(st=>{const avg=getStageAvg(cid,st);return avg!=null?{stage:st,avg}:null;}).filter(Boolean);
   if(!scored.length)return'';
   const overallAvg=scored.reduce((a,s)=>a+s.avg,0)/scored.length;
   const pct=Math.round(overallAvg/5*100);
   const hired=overallAvg>=3.0;
   return`<div class="card" style="margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Interview Score</div>
-    ${scored.map(s=>{const sc=STAGE_C[s.stage]||'#4F46E5';return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">${s.stage}</span><span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span></div><div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div></div></div>`;}).join('')}
+    ${scored.map(s=>{const cr=customRounds.find(r=>r.name===s.stage&&r.rid===rid);const sc=STAGE_C[s.stage]||(cr?cr.color:'#4F46E5');return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">${s.stage}</span><span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span></div><div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div></div></div>`;}).join('')}
     <div style="height:1px;background:var(--border);margin:12px 0"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:12px;font-weight:600">Overall Average</span><span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${overallAvg.toFixed(1)}/5</span></div>
     <div style="height:8px;border-radius:5px;background:#F3F4F6;overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:5px;background:${hired?'#16A34A':'#DC2626'};width:${pct}%;transition:width .5s"></div></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:18px;font-weight:900;color:${hired?'#16A34A':'#DC2626'}">${pct}%</span><span class="badge" style="background:${hired?'#F0FDF4':'#FEF2F2'};color:${hired?'#16A34A':'#DC2626'};font-size:12px;padding:5px 12px">${hired?'✅ Hire':'❌ Do Not Hire'}</span></div>
-    <div style="font-size:10px;color:var(--muted)">Min. 60% (avg ≥ 3.0) · ${FB_STAGES.length-scored.length} round${FB_STAGES.length-scored.length!==1?'s':''} pending</div>
+    <div style="font-size:10px;color:var(--muted)">Min. 60% (avg ≥ 3.0) · ${fbStages.length-scored.length} round${fbStages.length-scored.length!==1?'s':''} pending</div>
   </div>`;
 }
 function renderScoreChart(cid){
-  const scores=FB_STAGES.map(st=>getStageAvg(cid,st));
+  const rid=candidates.find(x=>x.id===cid)?.rid;
+  const fbStages=getRoleFBStages(rid);
+  const scores=fbStages.map(st=>getStageAvg(cid,st));
   if(!scores.some(v=>v!=null))return'';
   return`<div class="card" style="margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;margin-bottom:12px">📈 Score Chart</div>
@@ -2031,7 +2139,7 @@ function renderPipelineCands(){
       </div></td>
       <td onclick="event.stopPropagation()">
         <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${STAGE_C[c.stage]||'#E5E7EB'}55;background:${STAGE_C[c.stage]||'#F3F4F6'}18;color:${STAGE_C[c.stage]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
-          ${STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
+          ${getRoleStages(c.rid).map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
         </select>
       </td>
       <td onclick="event.stopPropagation()">
