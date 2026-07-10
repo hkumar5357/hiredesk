@@ -517,7 +517,6 @@ function renderApp(){
       <nav class="sb-nav" id="sb-nav">
         ${navs.map(n=>`<div class="nav-item${S.page===n.id?' active':''}" onclick="nav('${n.id}')" id="ni-${n.id}">${n.icon}<span>${n.label}</span>${n.badge?`<span style="margin-left:auto;font-size:9px;font-weight:700;background:#16A34A;color:#fff;padding:2px 6px;border-radius:10px">${n.badge}</span>`:''}</div>`).join('')}
         ${isAdmin?`<div class="nav-item" onclick="showAddCand()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/></svg><span>Add Candidate</span></div>`:''}
-        ${isAdmin?`<div class="nav-item" onclick="showEditRounds()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/><path d="M4.93 19.07l-1.41 1.41"/><path d="M19.07 19.07l-1.41-1.41"/><path d="M4.93 4.93l1.41 1.41"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg><span>Edit Round Names</span></div>`:''}
       </nav>
       <div class="sb-footer">
         <div class="user-av">${ini(S.user?.name||'U')}</div>
@@ -2235,6 +2234,7 @@ function renderPipelineProfile(){
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${isCurrent?STAGE_C[stage]:'#D1D5DB'};flex-shrink:0"></div>
           <span style="font-size:13px;font-weight:700;color:${isCurrent?'var(--text)':'var(--muted)'}">${stage}</span>
+          ${isAdmin?`<button onclick="event.stopPropagation();editRoundName('${stage.replace(/'/g,"\\'")}',this)" title="Rename round" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--muted);display:flex;align-items:center;opacity:0.6" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
           ${isCurrent?`<span style="font-size:10px;font-weight:700;color:${STAGE_C[stage]};background:${STAGE_C[stage]}18;padding:2px 8px;border-radius:20px">Current Stage</span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
@@ -2288,37 +2288,35 @@ function submitFBPip(cid,stage){
 }
 
 // ── EDIT ROUND NAMES ──────────────────────────────────────────────
-function showEditRounds(){
-  modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Edit Interview Round Names</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Rename rounds across all jobs and candidates. Changes apply immediately.</div>
-    ${STAGES.map((s,i)=>`<div style="margin-bottom:10px">
-      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Round ${i+1}</label>
-      <input id="rn-${i}" class="input" value="${s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box">
-    </div>`).join('')}
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+function editRoundName(stage){
+  const idx=STAGES.indexOf(stage);if(idx===-1)return;
+  modal(`<div style="font-size:15px;font-weight:700;margin-bottom:4px">Rename Round</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Updates across all jobs and candidates.</div>
+    <input id="rn-single" class="input" value="${stage.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box" autofocus>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRoundNames()">Save Changes</button>
+      <button class="btn btn-primary" onclick="saveOneStageName(${idx})">Save</button>
     </div>`);
+  setTimeout(()=>{const el=document.getElementById('rn-single');if(el){el.focus();el.select();}},80);
 }
-function saveRoundNames(){
-  const newNames=STAGES.map((_,i)=>(document.getElementById('rn-'+i)?.value||'').trim());
-  if(newNames.some(n=>!n)){toast('All round names are required','err');return;}
-  if(new Set(newNames).size!==newNames.length){toast('Round names must be unique','err');return;}
-  newNames.forEach((newName,i)=>{
-    const oldName=STAGES[i];
-    if(newName!==oldName){
-      candidates=candidates.map(c=>c.stage===oldName?{...c,stage:newName}:c);
-      feedback=feedback.map(f=>f.stage===oldName?{...f,stage:newName}:f);
-      schedule=schedule.map(s=>s.round===oldName?{...s,round:newName}:s);
-    }
-  });
-  applyStageNames(newNames);
-  sbSave('stage_names',newNames);
-  sbSave('candidates',candidates);
-  sbSave('feedback',feedback);
-  sbSave('schedule',schedule);
+function saveOneStageName(idx){
+  const newName=(document.getElementById('rn-single')?.value||'').trim();
+  if(!newName){toast('Name required','err');return;}
+  if(STAGES.some((s,i)=>i!==idx&&s===newName)){toast('Name already in use','err');return;}
+  const oldName=STAGES[idx];
+  if(newName!==oldName){
+    const newNames=STAGES.map((s,i)=>i===idx?newName:s);
+    candidates=candidates.map(c=>c.stage===oldName?{...c,stage:newName}:c);
+    feedback=feedback.map(f=>f.stage===oldName?{...f,stage:newName}:f);
+    schedule=schedule.map(s=>s.round===oldName?{...s,round:newName}:s);
+    applyStageNames(newNames);
+    sbSave('stage_names',newNames);
+    sbSave('candidates',candidates);
+    sbSave('feedback',feedback);
+    sbSave('schedule',schedule);
+    toast('Round renamed ✓');
+  }
   closeModal();
-  toast('Round names updated ✓');
   renderPage();
 }
 
