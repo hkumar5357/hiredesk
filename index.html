@@ -366,12 +366,10 @@ async function loadAllData(){
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
-  // Candidates: merge defaults with stored
+  // Candidates: use stored data as-is; only seed defaults on first load
   const stored=map['candidates'];
   if(stored&&Array.isArray(stored)){
-    const ids=new Set(stored.map(c=>c.id));
-    candidates=[...stored,..._defaultCandidates.filter(c=>!ids.has(c.id))];
-    if(candidates.length>stored.length)sbSave('candidates',candidates);
+    candidates=stored;
   } else {
     candidates=_defaultCandidates.map(c=>({...c}));
     sbSave('candidates',candidates);
