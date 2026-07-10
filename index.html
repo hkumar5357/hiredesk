@@ -1438,6 +1438,7 @@ function renderAppCands(){
         <div style="display:flex;gap:5px;align-items:center">
           ${c.li?`<a href="${c.li}" target="_blank" onclick="event.stopPropagation()" title="LinkedIn" style="width:26px;height:26px;border-radius:6px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;color:#4F46E5;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>`:''}
           ${c.cv?`<a href="${c.cv}" target="_blank" onclick="event.stopPropagation()" title="Resume" style="width:26px;height:26px;border-radius:6px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;color:#16A34A;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></a>`:''}
+          ${S.user?.role==='admin'?`<button onclick="event.stopPropagation();deleteCand('${c.id}')" title="Delete candidate" style="width:26px;height:26px;border-radius:6px;background:#FEF2F2;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#DC2626"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`:''}
         </div>
       </div>
       <div style="font-size:13px;font-weight:700;margin-bottom:2px">${c.name}</div>
@@ -1448,6 +1449,18 @@ function renderAppCands(){
 }
 
 function selectCand(cid){S.cid=cid;S.view='profile';renderApps();}
+function deleteCand(cid){
+  const c=candidates.find(x=>x.id===cid);if(!c)return;
+  if(!confirm(`Delete ${c.name}? This cannot be undone.`))return;
+  candidates=candidates.filter(x=>x.id!==cid);
+  feedback=feedback.filter(f=>f.cid!==cid);
+  attachments=attachments.filter(a=>a.cid!==cid);
+  sbSave('candidates',candidates);
+  sbSave('feedback',feedback);
+  sbSave('fb_attachments',attachments);
+  toast(`${c.name} deleted`);
+  renderApps();
+}
 
 function renderProfile(){
   const c=candOf(S.cid);if(!c)return;
@@ -1723,11 +1736,10 @@ function renderFBRound(cid,stage){
           Interview Files
         </div>
         <div id="att-list-${cid}-${sk}">${renderRoundAttachments(cid,stage)}</div>
-        <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px dashed #D1D5DB;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;transition:border-color .2s" onmouseover="this.style.borderColor='${sc}';this.style.color='${sc}'" onmouseout="this.style.borderColor='#D1D5DB';this.style.color='var(--muted)'">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Attach file
-          <input type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" style="display:none" onchange="attachFBFile('${cid}','${stage}','${sk}',this)">
-        </label>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input id="att-inp-${cid}-${sk}" type="url" placeholder="Paste link (Google Drive, SharePoint, Notion…)" onkeydown="if(event.key==='Enter')addFBLink('${cid}','${stage}','${sk}')" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;color:var(--text);outline:none;background:#fff">
+          <button onclick="addFBLink('${cid}','${stage}','${sk}')" style="padding:7px 14px;background:${sc};color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -1805,31 +1817,31 @@ function _fileIcon(type){
 }
 function renderRoundAttachments(cid,stage){
   const atts=attachments.filter(a=>a.cid===cid&&a.stage===stage);
-  if(!atts.length)return'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">No files attached yet.</div>';
+  if(!atts.length)return'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">No links added yet.</div>';
   return atts.map(a=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#F9FAFB;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-      <span style="font-size:18px;flex-shrink:0">${_fileIcon(a.type)}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2.5" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       <div style="flex:1;min-width:0">
-        <a href="${a.data}" download="${a.name}" style="font-size:12px;font-weight:600;color:#4F46E5;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name}">${a.name}</a>
-        <div style="font-size:10px;color:var(--muted)">${a.reviewer} · ${_fmtSize(a.size)} · ${a.on}</div>
+        <a href="${a.url}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:#4F46E5;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.url}">${a.name||a.url}</a>
+        <div style="font-size:10px;color:var(--muted)">${a.reviewer} · ${a.on}</div>
       </div>
       <button onclick="removeAttachment('${a.id}','${cid}','${stage}','${stage.replace(/ /g,'_')}')" title="Remove" style="background:none;border:none;cursor:pointer;padding:3px 6px;font-size:16px;color:#D1D5DB;line-height:1" onmouseover="this.style.color='#DC2626'" onmouseout="this.style.color='#D1D5DB'">×</button>
     </div>`).join('');
 }
-function attachFBFile(cid,stage,sk,input){
-  const file=input.files[0];if(!file)return;
-  if(file.size>10*1024*1024){toast('File too large — max 10 MB','err');input.value='';return;}
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const att={id:'att'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',name:file.name,type:file.type,size:file.size,data:e.target.result,on:new Date().toISOString().split('T')[0]};
-    attachments=[...attachments,att];
-    sbSave('fb_attachments',attachments);
-    const el=document.getElementById(`att-list-${cid}-${sk}`);
-    if(el)el.innerHTML=renderRoundAttachments(cid,stage);
-    toast('File attached ✓');
-  };
-  reader.readAsDataURL(file);
-  input.value='';
+function addFBLink(cid,stage,sk){
+  const inp=document.getElementById(`att-inp-${cid}-${sk}`);
+  if(!inp)return;
+  const url=inp.value.trim();
+  if(!url){toast('Paste a link first','err');return;}
+  if(!/^https?:\/\//i.test(url)){toast('Link must start with http:// or https://','err');return;}
+  const name=decodeURIComponent(url.split('/').filter(Boolean).pop().split('?')[0])||url;
+  const att={id:'att'+Date.now(),cid,stage,reviewer:S.user?.name||'Unknown',name,url,on:new Date().toISOString().split('T')[0]};
+  attachments=[...attachments,att];
+  sbSave('fb_attachments',attachments);
+  inp.value='';
+  const el=document.getElementById(`att-list-${cid}-${sk}`);
+  if(el)el.innerHTML=renderRoundAttachments(cid,stage);
+  toast('Link added ✓');
 }
 function removeAttachment(id,cid,stage,sk){
   if(!confirm('Remove this file?'))return;
