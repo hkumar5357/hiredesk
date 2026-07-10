@@ -409,12 +409,12 @@ function subscribeRealtime(){
       const row=payload.new||{};
       const k=row.store_key;const d=row.data;
       if(!k||!Array.isArray(d))return;
-      if(k==='candidates'){const ids=new Set(d.map(c=>c.id));candidates=[...d,..._defaultCandidates.filter(c=>!ids.has(c.id))];}
+      if(k==='candidates')candidates=d;
       else if(k==='open_roles')openRoles=d;
       else if(k==='schedule')schedule=d;
       else if(k==='feedback')feedback=d;
       else if(k==='notifications'){notifications=d;updateBell();}
-      else if(k==='onboarded_hires'){const obIds=new Set(d.map(h=>h.id));onboardedHires=[...d,..._onboardedHires.filter(h=>!obIds.has(h.id))];}
+      else if(k==='onboarded_hires')onboardedHires=d;
       if(document.getElementById('mc'))renderPage();
     })
     .subscribe();
