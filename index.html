@@ -118,27 +118,31 @@ let STAGES=[..._DEFAULT_STAGES];
 let STAGE_C={..._DEFAULT_STAGE_C};
 let FB_STAGES=[..._DEFAULT_FB_STAGES];
 let FB_COMPETENCIES=JSON.parse(JSON.stringify(_DEFAULT_FB_COMPETENCIES));
-function applyStageNames(newNames){
-  if(!newNames||newNames.length!==_DEFAULT_STAGES.length)return;
-  STAGES=[..._DEFAULT_STAGES];STAGE_C={..._DEFAULT_STAGE_C};FB_STAGES=[..._DEFAULT_FB_STAGES];FB_COMPETENCIES=JSON.parse(JSON.stringify(_DEFAULT_FB_COMPETENCIES));
-  newNames.forEach((newName,i)=>{
-    const oldName=_DEFAULT_STAGES[i];
-    if(newName&&newName.trim()&&newName!==oldName){
-      FB_STAGES=FB_STAGES.map(s=>s===oldName?newName:s);
-      if(FB_COMPETENCIES[oldName]!==undefined){FB_COMPETENCIES[newName]=FB_COMPETENCIES[oldName];delete FB_COMPETENCIES[oldName];}
-      STAGE_C[newName]=STAGE_C[oldName];delete STAGE_C[oldName];
-      STAGES[i]=newName;
-    }
-  });
-}
-const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},2:{label:'Concern',bg:'#EA580C'},3:{label:'Mixed',bg:'#CA8A04'},4:{label:'Promising',bg:'#2563EB'},5:{label:'Strong Yes',bg:'#16A34A'}};
+let roleStageNames={}; // {rid: {defaultName: customDisplayName}}
+function getRoleDisplayName(rid,defaultName){return(roleStageNames[rid]&&roleStageNames[rid][defaultName])||defaultName;}
+function getStageColor(rid,stageName){return getRoundColor(rid,stageName);}
+function applyStageNames(newNames){} // kept for backwards compat, no longer used
+const VERDICT_MAP={1:{label:'Strong Concern',bg:'#DC2626'},1.5:{label:'Concern',bg:'#EF4444'},2:{label:'Below Average',bg:'#EA580C'},2.5:{label:'Average',bg:'#D97706'},3:{label:'Mixed',bg:'#CA8A04'},3.5:{label:'Good',bg:'#65A30D'},4:{label:'Promising',bg:'#2563EB'},4.5:{label:'Strong',bg:'#059669'},5:{label:'Strong Yes',bg:'#16A34A'}};
+const SCORE_VALUES=[1,1.5,2,2.5,3,3.5,4,4.5,5];
+const INTERVIEW_MODES=['Google Meet','Microsoft Teams','Zoom','In-person','Phone'];
 let _fbDraft={};
 let _fbNotes={};
 let _fbMeta={};
-const _CR_COLORS=['#10B981','#F97316','#6366F1','#14B8A6','#D946EF','#84CC16'];
-function getRoleFBStages(rid){return[...FB_STAGES,...customRounds.filter(r=>r.rid===rid).map(r=>r.name)];}
-function getRoleStages(rid){return[...STAGES,...customRounds.filter(r=>r.rid===rid).map(r=>r.name)];}
-function getCustomRoundColor(rid){const idx=customRounds.filter(r=>r.rid===rid).length;return _CR_COLORS[idx%_CR_COLORS.length];}
+const _CR_COLORS=['#8B5CF6','#3B82F6','#0EA5E9','#10B981','#F97316','#EC4899','#F59E0B','#6366F1','#14B8A6','#D946EF'];
+function getDefaultTemplate(rid){return{rounds:_DEFAULT_FB_STAGES.map((name,i)=>({id:'r'+i+'_'+rid,name,mode:'Google Meet',order:i,competencies:(_DEFAULT_FB_COMPETENCIES[name]||[]).map((n,j)=>({id:'c'+j+'_'+name.replace(/ /g,'').slice(0,8),name:n}))}))}}
+function getRoleTemplate(rid){
+  if(!interviewTemplates[rid]){
+    interviewTemplates[rid]=getDefaultTemplate(rid);
+    const legacy=(typeof customRounds!=='undefined'?customRounds:[]).filter(r=>r.rid===rid);
+    legacy.forEach(cr=>{if(!interviewTemplates[rid].rounds.find(r=>r.name===cr.name)){interviewTemplates[rid].rounds.push({id:cr.id,name:cr.name,mode:'Google Meet',order:interviewTemplates[rid].rounds.length,competencies:cr.competencies||[]});}});
+  }
+  return interviewTemplates[rid];
+}
+function saveRoleTemplate(rid){interviewTemplates[rid]=getRoleTemplate(rid);sbSave('hd_interview_templates',interviewTemplates);}
+function getRoleFBStages(rid){return getRoleTemplate(rid).rounds.map(r=>r.name);}
+function getRoleStages(rid){return getRoleTemplate(rid).rounds.map(r=>r.name);}
+function getRoundColor(rid,name){const t=interviewTemplates[rid];if(!t)return'#6B7280';const idx=t.rounds.findIndex(r=>r.name===name);return _CR_COLORS[Math.max(0,idx)%_CR_COLORS.length];}
+function getCustomRoundColor(rid){return _CR_COLORS[getRoleTemplate(rid).rounds.length%_CR_COLORS.length];}// compat
 const STATUS_LABEL={red:'Rejected',yellow:'Pipeline',blue:'In Process',green:'Selected'};
 const STATUS_C={red:'#DC2626',yellow:'#CA8A04',blue:'#2563EB',green:'#16A34A'};
 const STATUS_BG={red:'#FEF2F2',yellow:'#FEFCE8',blue:'#EFF6FF',green:'#F0FDF4'};
@@ -253,6 +257,7 @@ let candidates=[];
 let feedback=[];
 let attachments=[];
 let customRounds=[];
+let interviewTemplates={};
 let notifications=[];
 const _defaultSchedule=[];
 let schedule=[];
@@ -384,7 +389,7 @@ function sbSave(storeKey,val){
     .then(({error})=>{if(error)console.error('sbSave:',storeKey,error.message);});
 }
 async function loadAllData(){
-  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments','hd_custom_rounds','stage_names'];
+  const keys=['candidates','open_roles','schedule','feedback','notifications','onboarded_hires','fb_attachments','hd_custom_rounds','hd_interview_templates','stage_names','role_stage_names'];
   const {data,error}=await sb.from('hd_store').select('store_key,data').in('store_key',keys);
   if(error){console.error('loadAllData:',error.message);return false;}
   const map=Object.fromEntries((data||[]).map(r=>[r.store_key,r.data]));
@@ -411,11 +416,12 @@ async function loadAllData(){
   // Attachments
   attachments=map['fb_attachments']&&Array.isArray(map['fb_attachments'])?map['fb_attachments']:[];
   if(!map['fb_attachments'])sbSave('fb_attachments',attachments);
-  // Custom interview rounds
+  // Legacy custom rounds (kept for migration only)
   customRounds=map['hd_custom_rounds']&&Array.isArray(map['hd_custom_rounds'])?map['hd_custom_rounds']:[];
-  if(!map['hd_custom_rounds'])sbSave('hd_custom_rounds',customRounds);
-  // Stage names — apply custom round names if saved
-  if(map['stage_names']&&Array.isArray(map['stage_names']))applyStageNames(map['stage_names']);
+  // Per-role interview templates (source of truth)
+  interviewTemplates=map['hd_interview_templates']&&typeof map['hd_interview_templates']==='object'&&!Array.isArray(map['hd_interview_templates'])?map['hd_interview_templates']:{};
+  // Per-role stage name overrides
+  roleStageNames=map['role_stage_names']&&typeof map['role_stage_names']==='object'&&!Array.isArray(map['role_stage_names'])?map['role_stage_names']:{};
   // Onboarded hires — merge defaults so new default entries propagate
   const storedOB=map['onboarded_hires'];
   if(storedOB&&Array.isArray(storedOB)){
@@ -435,14 +441,15 @@ function subscribeRealtime(){
     .on('postgres_changes',{event:'*',schema:'public',table:'hd_store'},payload=>{
       const row=payload.new||{};
       const k=row.store_key;const d=row.data;
-      if(!k||!Array.isArray(d))return;
+      if(!k)return;
+      if(k==='role_stage_names'){roleStageNames=d&&typeof d==='object'&&!Array.isArray(d)?d:{};if(document.getElementById('mc'))renderPage();return;}
+      if(!Array.isArray(d))return;
       if(k==='candidates')candidates=d;
       else if(k==='open_roles')openRoles=d;
       else if(k==='schedule')schedule=d;
       else if(k==='feedback')feedback=d;
       else if(k==='notifications'){notifications=d;updateBell();}
       else if(k==='onboarded_hires')onboardedHires=d;
-      else if(k==='stage_names'){applyStageNames(d);}
       if(document.getElementById('mc'))renderPage();
     })
     .subscribe();
@@ -1325,6 +1332,7 @@ function renderRoles(){
       </td>
       <td><div style="display:flex;gap:6px">
         <button class="btn btn-secondary btn-sm" onclick="editRole('${r.id}')">Edit JD</button>
+        <button class="btn btn-secondary btn-sm" onclick="openInterviewTemplate('${r.id}')" style="color:#4F46E5;border-color:#4F46E5">Interview Template</button>
       </div></td>
     </tr>`;
   }).join('')}</tbody></table></div>`;
@@ -1557,11 +1565,11 @@ function renderProfile(){
       </div>
       <div class="card">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px">Interview Stage Tracker</div>
-        ${STAGES.map(s=>`
+        ${getRoleStages(c.rid).map(s=>`
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div style="width:8px;height:8px;border-radius:50%;background:${c.stage===s?STAGE_C[s]:'#E5E7EB'};flex-shrink:0"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${c.stage===s?getStageColor(c.rid,s):'#E5E7EB'};flex-shrink:0"></div>
           <div style="font-size:12px;color:${c.stage===s?'var(--text)':'var(--muted)'};font-weight:${c.stage===s?'600':'400'}">${s}</div>
-          ${c.stage===s?'<span style="font-size:10px;color:#4F46E5;font-weight:700;margin-left:auto">Current</span>':''}
+          ${c.stage===s?`<span style="font-size:10px;color:${getStageColor(c.rid,s)};font-weight:700;margin-left:auto">Current</span>`:''}
         </div>`).join('')}
       </div>
       <div id="score-chart-${c.id}">${renderScoreChart(c.id)}</div>
@@ -1653,8 +1661,8 @@ function initFBDraft(cid){
       _fbDraft[cid][stage]=existing.competencies.map(c=>({id:c.id,name:c.name,score:c.score??null}));
       if(existing.hire!=null)_fbMeta[cid][stage].hire=existing.hire;
     } else {
-      const cr=customRounds.find(r=>r.rid===rid&&r.name===stage);
-      _fbDraft[cid][stage]=cr?cr.competencies.map((cp,i)=>({id:cp.id||'cp'+i+stage.replace(/ /g,''),name:cp.name,score:null})):(FB_COMPETENCIES[stage]||[]).map((name,i)=>({id:'cp'+i+stage.replace(/ /g,''),name,score:null}));
+      const tmplRound=getRoleTemplate(rid).rounds.find(r=>r.name===stage);
+      _fbDraft[cid][stage]=(tmplRound?.competencies||[]).map(cp=>({id:cp.id,name:cp.name,score:null}));
     }
     _fbNotes[cid][stage]=existing?.text||'';
   });
@@ -1705,27 +1713,33 @@ function renderFBSection(c){
   return`<div class="card" id="fb-section">
     <div style="font-size:14px;font-weight:700;margin-bottom:16px">Interview Feedback</div>
     ${stages.map(stage=>renderFBRound(c.id,stage,c.rid)).join('')}
-    ${S.user?.role==='admin'?`<button onclick="openAddRoundModal('${c.rid}','${c.id}')" style="margin-top:4px;width:100%;background:none;border:1.5px dashed #D1D5DB;color:var(--muted);padding:9px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='#4F46E5';this.style.color='#4F46E5'" onmouseout="this.style.borderColor='#D1D5DB';this.style.color='var(--muted)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Add Interview Round</button>`:''}
+    ${S.user?.role==='admin'?`<div style="margin-top:8px;padding:8px 10px;background:#F9FAFB;border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      To add or modify interview rounds, edit the
+      <a onclick="openInterviewTemplate('${c.rid}')" style="color:#4F46E5;font-weight:600;cursor:pointer;text-decoration:underline">Interview Template</a>
+      for this role.
+    </div>`:''}
   </div>`;
 }
 function renderFBRound(cid,stage,rid){
   const comps=(_fbDraft[cid]||{})[stage]||[];
   const hire=(_fbMeta[cid]||{})[stage]?.hire??null;
-  const cr=customRounds.find(r=>r.name===stage&&r.rid===rid);
-  const sc=STAGE_C[stage]||(cr?cr.color:'#4F46E5');
+  const sc=getRoundColor(rid,stage);
+  const tmplRound=getRoleTemplate(rid).rounds.find(r=>r.name===stage);
+  const mode=tmplRound?.mode||'';
   const scored=comps.filter(c=>c.score!=null);
   const sum=scored.reduce((a,c)=>a+c.score,0);
   const avg=scored.length?sum/scored.length:0;
   const sk=stage.replace(/ /g,'_');
-  const hireLabel=hire===true?'✅ Hire':hire===false?'❌ No Hire':null;
   const hireBadge=hire===true?`<span style="background:#DCFCE7;color:#16A34A;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">✅ Hire</span>`:hire===false?`<span style="background:#FEE2E2;color:#DC2626;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">❌ No Hire</span>`:'';
+  const modeIcon={'Google Meet':'🎥','Microsoft Teams':'💼','Zoom':'📹','In-person':'🏢','Phone':'📞'}[mode]||'📋';
   return`<div id="fb-round-${cid}-${sk}" style="margin-bottom:14px;border:1px solid ${sc}30;border-radius:10px;overflow:hidden">
     <div style="background:${sc}12;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${sc}20">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="width:8px;height:8px;border-radius:50%;background:${sc};flex-shrink:0"></div>
-        <span id="cr-label-${sk}" style="font-size:13px;font-weight:700">${stage}</span>
+        <span style="font-size:13px;font-weight:700">${stage}</span>
         ${hireBadge}
-        ${S.user?.role==='admin'?cr?`<button onclick="editRoundName('${cr.id}','${rid}','${cid}')" title="Rename round" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:${sc};opacity:.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">✏️</button><button onclick="deleteCustomRound('${cr.id}','${rid}','${cid}')" title="Delete round" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:#DC2626;opacity:.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">🗑️</button>`:`<button onclick="renameDefaultStage('${stage.replace(/'/g,"\\'")}','${cid}')" title="Rename round" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:${sc};opacity:.7;display:flex;align-items:center" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
+        ${mode?`<span style="font-size:10px;color:var(--muted);background:#F3F4F6;padding:2px 7px;border-radius:10px">${modeIcon} ${mode}</span>`:''}
       </div>
       ${scored.length?`<span style="font-size:11px;font-weight:700;color:${sc};background:${sc}20;padding:3px 10px;border-radius:20px">Avg ${avg.toFixed(1)}/5</span>`:'<span style="font-size:11px;color:var(--muted)">Not scored yet</span>'}
     </div>
@@ -1791,7 +1805,7 @@ function renderCompRow(cid,stage,comp,idx){
     <td style="padding:7px 4px;text-align:center">
       <select onchange="updateCompScore('${cid}','${stage}',${idx},this.value)" style="width:56px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff">
         <option value="">—</option>
-        ${[1,2,3,4,5].map(n=>`<option value="${n}"${comp.score===n?' selected':''}>${n}</option>`).join('')}
+        ${SCORE_VALUES.map(n=>`<option value="${n}"${comp.score===n?' selected':''}>${n}</option>`).join('')}
       </select>
     </td>
     <td style="padding:7px 4px">
@@ -1805,9 +1819,10 @@ function addCompRow(cid,stage){
   const rid=candidates.find(x=>x.id===cid)?.rid;
   const newComp={id:'cp'+Date.now(),name:'New Competency',score:null};
   _fbDraft[cid][stage].push(newComp);
-  // sync to customRounds definition so other candidates inherit it
-  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
-  if(crIdx!==-1){customRounds[crIdx].competencies=[...(customRounds[crIdx].competencies||[]),{id:newComp.id,name:newComp.name}];sbSave('hd_custom_rounds',customRounds);}
+  // sync to interview template so other candidates inherit it
+  const tmpl=getRoleTemplate(rid);
+  const rIdx=tmpl.rounds.findIndex(r=>r.name===stage);
+  if(rIdx!==-1){tmpl.rounds[rIdx].competencies=[...(tmpl.rounds[rIdx].competencies||[]),{id:newComp.id,name:newComp.name}];saveRoleTemplate(rid);}
   saveFBDraft(cid,stage);
   const newIdx=_fbDraft[cid][stage].length-1;
   refreshFBRound(cid,stage);
@@ -1818,9 +1833,10 @@ function deleteCompRow(cid,stage,idx){
   const rid=candidates.find(x=>x.id===cid)?.rid;
   const compId=_fbDraft[cid][stage][idx]?.id;
   _fbDraft[cid][stage].splice(idx,1);
-  // sync deletion to customRounds definition
-  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
-  if(crIdx!==-1&&compId){customRounds[crIdx].competencies=customRounds[crIdx].competencies.filter(c=>c.id!==compId);sbSave('hd_custom_rounds',customRounds);}
+  // sync deletion to interview template
+  const tmpl=getRoleTemplate(rid);
+  const rIdx=tmpl.rounds.findIndex(r=>r.name===stage);
+  if(rIdx!==-1&&compId){tmpl.rounds[rIdx].competencies=tmpl.rounds[rIdx].competencies.filter(c=>c.id!==compId);saveRoleTemplate(rid);}
   saveFBDraft(cid,stage);
   refreshFBRound(cid,stage);
 }
@@ -1837,16 +1853,17 @@ function saveCompName(cid,stage,idx,val){
   const name=val.trim()||'Unnamed';
   const compId=_fbDraft[cid][stage][idx]?.id;
   _fbDraft[cid][stage][idx].name=name;
-  // sync rename to customRounds definition
+  // sync rename to interview template
   const rid=candidates.find(x=>x.id===cid)?.rid;
-  const crIdx=customRounds.findIndex(r=>r.rid===rid&&r.name===stage);
-  if(crIdx!==-1&&compId){const ci=customRounds[crIdx].competencies.findIndex(c=>c.id===compId);if(ci!==-1){customRounds[crIdx].competencies[ci].name=name;sbSave('hd_custom_rounds',customRounds);}}
+  const tmpl=getRoleTemplate(rid);
+  const rIdx=tmpl.rounds.findIndex(r=>r.name===stage);
+  if(rIdx!==-1&&compId){const ci=tmpl.rounds[rIdx].competencies.findIndex(c=>c.id===compId);if(ci!==-1){tmpl.rounds[rIdx].competencies[ci].name=name;saveRoleTemplate(rid);}}
   saveFBDraft(cid,stage);
   refreshFBRound(cid,stage);
 }
 function updateCompScore(cid,stage,idx,val){
   if(!_fbDraft[cid]?.[stage])return;
-  _fbDraft[cid][stage][idx].score=val?parseInt(val):null;
+  _fbDraft[cid][stage][idx].score=val?parseFloat(val):null;
   saveFBDraft(cid,stage);
   refreshFBRound(cid,stage);
   refreshScoreSidebar(cid);
@@ -1918,76 +1935,148 @@ function refreshFBSection(cid){
   tmp.innerHTML=renderFBSection(c);
   el.replaceWith(tmp.firstElementChild);
 }
-function openAddRoundModal(rid,cid){
-  document.getElementById('cr-modal-wrap')?.remove();
-  const wrap=document.createElement('div');
-  wrap.id='cr-modal-wrap';
-  wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:center;justify-content:center';
-  wrap.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px 28px 24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-    <div style="font-size:16px;font-weight:800;margin-bottom:6px">Add Interview Round</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">This round will appear for all candidates in this job role.</div>
-    <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Round Name *</label>
-    <input id="cr-name-inp" class="input" type="text" placeholder="e.g. Portfolio Review, Case Study…" style="margin-bottom:18px;font-size:13px" onkeydown="if(event.key==='Enter')saveNewRound('${rid}','${cid}')">
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="document.getElementById('cr-modal-wrap').remove()" style="padding:8px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)">Cancel</button>
-      <button onclick="saveNewRound('${rid}','${cid}')" style="padding:8px 20px;border:none;border-radius:8px;background:#4F46E5;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Add Round</button>
+// ── INTERVIEW TEMPLATE MANAGEMENT ────────────────────────────────
+function openInterviewTemplate(rid){
+  const r=roleOf(rid);if(!r)return;
+  document.getElementById('it-overlay')?.remove();
+  const el=document.createElement('div');
+  el.id='it-overlay';
+  el.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:1500;overflow-y:auto;padding:32px 0';
+  el.innerHTML=`<div style="max-width:760px;margin:0 auto;padding:0 24px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
+      <button onclick="document.getElementById('it-overlay').remove()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)">← Back</button>
+      <div>
+        <div style="font-size:18px;font-weight:800">${r.title}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Interview Template — configure rounds and competencies for this role</div>
+      </div>
     </div>
+    <div id="it-body">${renderITBody(rid)}</div>
   </div>`;
-  document.body.appendChild(wrap);
-  setTimeout(()=>document.getElementById('cr-name-inp')?.focus(),50);
-  wrap.addEventListener('click',e=>{if(e.target===wrap)wrap.remove();});
+  document.body.appendChild(el);
 }
-function saveNewRound(rid,cid){
-  const name=document.getElementById('cr-name-inp')?.value?.trim();
-  if(!name){toast('Enter a round name','err');return;}
-  if(getRoleFBStages(rid).map(s=>s.toLowerCase()).includes(name.toLowerCase())){toast('A round with this name already exists','err');return;}
-  const color=_CR_COLORS[customRounds.filter(r=>r.rid===rid).length%_CR_COLORS.length];
-  const round={id:'cr'+Date.now(),rid,name,color,competencies:[],createdAt:new Date().toISOString().split('T')[0]};
-  customRounds=[...customRounds,round];
-  sbSave('hd_custom_rounds',customRounds);
-  document.getElementById('cr-modal-wrap')?.remove();
-  // Init draft for new stage for this candidate
-  if(_fbDraft[cid]){_fbDraft[cid][name]=[];_fbMeta[cid][name]={hire:null};_fbNotes[cid][name]='';}
-  refreshFBSection(cid);
-  // Update stage dropdown in profile
-  const stSel=document.querySelector(`select[onchange*="updCand('${cid}','stage'"]`);
-  if(stSel){const opt=document.createElement('option');opt.value=name;opt.textContent=name;stSel.appendChild(opt);}
+function renderITBody(rid){
+  const tmpl=getRoleTemplate(rid);
+  if(!tmpl.rounds.length)return`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">No rounds yet. Add your first interview round below.</div>${renderITAddRoundBtn(rid)}`;
+  return tmpl.rounds.map((round,ri)=>`
+    <div style="border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;background:#fff">
+      <div style="background:${_CR_COLORS[ri%_CR_COLORS.length]}12;padding:12px 16px;border-bottom:1px solid ${_CR_COLORS[ri%_CR_COLORS.length]}20;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="width:8px;height:8px;border-radius:50%;background:${_CR_COLORS[ri%_CR_COLORS.length]};flex-shrink:0"></div>
+        <input id="it-rname-${round.id}" value="${round.name.replace(/"/g,'&quot;')}" onblur="saveRoundNameIT('${rid}','${round.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" style="flex:1;min-width:140px;font-size:14px;font-weight:700;border:none;background:transparent;outline:none;color:var(--text);padding:0">
+        <select onchange="saveRoundModeIT('${rid}','${round.id}',this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer">
+          ${INTERVIEW_MODES.map(m=>`<option value="${m}"${round.mode===m?' selected':''}>${{'Google Meet':'🎥','Microsoft Teams':'💼','Zoom':'📹','In-person':'🏢','Phone':'📞'}[m]||'📋'} ${m}</option>`).join('')}
+        </select>
+        <div style="display:flex;gap:4px;margin-left:auto">
+          ${ri>0?`<button onclick="moveRoundIT('${rid}','${round.id}',-1)" title="Move up" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">↑</button>`:''}
+          ${ri<tmpl.rounds.length-1?`<button onclick="moveRoundIT('${rid}','${round.id}',1)" title="Move down" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px">↓</button>`:''}
+          <button onclick="deleteRoundIT('${rid}','${round.id}')" title="Delete round" style="background:none;border:1px solid #FECACA;border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px;color:#DC2626">🗑</button>
+        </div>
+      </div>
+      <div style="padding:14px 16px">
+        ${round.competencies.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:4px 6px;font-size:10px;font-weight:600;color:var(--muted)">Competency</th>
+            <th style="width:32px"></th>
+            <th style="width:28px"></th>
+          </tr></thead>
+          <tbody>${round.competencies.map((cp,ci)=>`<tr style="border-bottom:1px solid #F9FAFB">
+            <td style="padding:6px"><span id="it-cp-${round.id}-${ci}" style="font-size:12px">${cp.name}</span></td>
+            <td><button onclick="editCompIT('${rid}','${round.id}',${ci})" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted)">✏️</button></td>
+            <td><button onclick="deleteCompIT('${rid}','${round.id}','${cp.id}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#DC2626">🗑</button></td>
+          </tr>`).join('')}</tbody>
+        </table>`:
+        `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;padding:8px;background:#F9FAFB;border-radius:6px">No competencies yet. Add one below.</div>`}
+        <button onclick="addCompIT('${rid}','${round.id}')" style="width:100%;background:none;border:1.5px dashed ${_CR_COLORS[ri%_CR_COLORS.length]}50;color:${_CR_COLORS[ri%_CR_COLORS.length]};padding:6px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">+ Add Competency</button>
+      </div>
+    </div>`).join('')+renderITAddRoundBtn(rid);
+}
+function renderITAddRoundBtn(rid){
+  return`<button onclick="addRoundIT('${rid}')" style="width:100%;background:#fff;border:1.5px dashed #D1D5DB;color:var(--muted);padding:11px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px" onmouseover="this.style.borderColor='#4F46E5';this.style.color='#4F46E5'" onmouseout="this.style.borderColor='#D1D5DB';this.style.color='var(--muted)'">+ Add Interview Round</button>`;
+}
+function refreshITBody(rid){const b=document.getElementById('it-body');if(b)b.innerHTML=renderITBody(rid);}
+function addRoundIT(rid){
+  const name=prompt('Round name (e.g. Portfolio Review, Case Study):')?.trim();
+  if(!name)return;
+  const tmpl=getRoleTemplate(rid);
+  if(tmpl.rounds.find(r=>r.name.toLowerCase()===name.toLowerCase())){toast('A round with this name already exists','err');return;}
+  const newRound={id:'r'+Date.now(),name,mode:'Google Meet',order:tmpl.rounds.length,competencies:[]};
+  tmpl.rounds.push(newRound);
+  saveRoleTemplate(rid);
+  // init draft for any open candidates
+  candidates.filter(c=>c.rid===rid).forEach(c=>{
+    if(_fbDraft[c.id]){_fbDraft[c.id][name]=[];_fbMeta[c.id][name]={hire:null};_fbNotes[c.id][name]='';}
+  });
+  refreshITBody(rid);
   toast(`"${name}" round added ✓`);
 }
-function deleteCustomRound(roundId,rid,cid){
-  const round=customRounds.find(r=>r.id===roundId);if(!round)return;
-  if(!confirm(`Delete the "${round.name}" round? All feedback for this round will also be removed.`))return;
-  customRounds=customRounds.filter(r=>r.id!==roundId);
-  feedback=feedback.filter(f=>!(f.cid===cid&&f.stage===round.name)||candidates.filter(c=>c.rid===rid).every(c=>c.id!==f.cid));
-  // Remove feedback for ALL candidates in this role
+function deleteRoundIT(rid,roundId){
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round)return;
+  if(!confirm(`Delete "${round.name}"? All feedback for this round will also be removed.`))return;
+  tmpl.rounds=tmpl.rounds.filter(r=>r.id!==roundId);
+  saveRoleTemplate(rid);
   const roleCids=new Set(candidates.filter(c=>c.rid===rid).map(c=>c.id));
   feedback=feedback.filter(f=>!(roleCids.has(f.cid)&&f.stage===round.name));
-  sbSave('hd_custom_rounds',customRounds);
   sbSave('feedback',feedback);
-  if(_fbDraft[cid]){delete _fbDraft[cid][round.name];}
-  refreshFBSection(cid);
-  refreshScoreSidebar(cid);
-  toast(`"${round.name}" round deleted`);
+  roleCids.forEach(cid=>{if(_fbDraft[cid]){delete _fbDraft[cid][round.name];delete _fbMeta[cid]?.[round.name];delete _fbNotes[cid]?.[round.name];}});
+  refreshITBody(rid);
+  toast(`"${round.name}" deleted`);
 }
-function editRoundName(roundId,rid,cid){
-  const round=customRounds.find(r=>r.id===roundId);if(!round)return;
-  const newName=prompt('Rename round:',round.name)?.trim();
-  if(!newName||newName===round.name)return;
-  if(getRoleFBStages(rid).filter(s=>s!==round.name).map(s=>s.toLowerCase()).includes(newName.toLowerCase())){toast('A round with this name already exists','err');return;}
-  const oldName=round.name;
-  customRounds=customRounds.map(r=>r.id===roundId?{...r,name:newName}:r);
-  // Update all feedback entries for all candidates in this role
+function saveRoundNameIT(rid,roundId,val){
+  const name=val.trim();if(!name)return;
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round||round.name===name)return;
+  if(tmpl.rounds.find(r=>r.id!==roundId&&r.name.toLowerCase()===name.toLowerCase())){toast('Name already used','err');return;}
+  const old=round.name;round.name=name;
+  saveRoleTemplate(rid);
   const roleCids=new Set(candidates.filter(c=>c.rid===rid).map(c=>c.id));
-  feedback=feedback.map(f=>roleCids.has(f.cid)&&f.stage===oldName?{...f,stage:newName}:f);
-  // Update in-memory drafts for current candidate
-  if(_fbDraft[cid]?.[oldName]){_fbDraft[cid][newName]=_fbDraft[cid][oldName];delete _fbDraft[cid][oldName];}
-  if(_fbMeta[cid]?.[oldName]){_fbMeta[cid][newName]=_fbMeta[cid][oldName];delete _fbMeta[cid][oldName];}
-  if(_fbNotes[cid]?.[oldName]){_fbNotes[cid][newName]=_fbNotes[cid][oldName];delete _fbNotes[cid][oldName];}
-  sbSave('hd_custom_rounds',customRounds);
+  feedback=feedback.map(f=>roleCids.has(f.cid)&&f.stage===old?{...f,stage:name}:f);
   sbSave('feedback',feedback);
-  refreshFBSection(cid);
-  toast(`Round renamed to "${newName}" ✓`);
+  roleCids.forEach(cid=>{
+    if(_fbDraft[cid]?.[old]){_fbDraft[cid][name]=_fbDraft[cid][old];delete _fbDraft[cid][old];}
+    if(_fbMeta[cid]?.[old]){_fbMeta[cid][name]=_fbMeta[cid][old];delete _fbMeta[cid][old];}
+    if(_fbNotes[cid]?.[old]){_fbNotes[cid][name]=_fbNotes[cid][old];delete _fbNotes[cid][old];}
+  });
+  toast(`Renamed to "${name}" ✓`);
 }
+function saveRoundModeIT(rid,roundId,mode){
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round)return;
+  round.mode=mode;saveRoleTemplate(rid);toast('Mode saved ✓');
+}
+function moveRoundIT(rid,roundId,dir){
+  const tmpl=getRoleTemplate(rid);
+  const idx=tmpl.rounds.findIndex(r=>r.id===roundId);if(idx<0)return;
+  const newIdx=idx+dir;if(newIdx<0||newIdx>=tmpl.rounds.length)return;
+  [tmpl.rounds[idx],tmpl.rounds[newIdx]]=[tmpl.rounds[newIdx],tmpl.rounds[idx]];
+  saveRoleTemplate(rid);refreshITBody(rid);
+}
+function addCompIT(rid,roundId){
+  const name=prompt('Competency name:')?.trim();if(!name)return;
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round)return;
+  round.competencies.push({id:'c'+Date.now(),name});
+  saveRoleTemplate(rid);refreshITBody(rid);toast('Competency added ✓');
+}
+function deleteCompIT(rid,roundId,compId){
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round)return;
+  if(!confirm('Delete this competency?'))return;
+  round.competencies=round.competencies.filter(c=>c.id!==compId);
+  saveRoleTemplate(rid);refreshITBody(rid);
+}
+function editCompIT(rid,roundId,ci){
+  const tmpl=getRoleTemplate(rid);
+  const round=tmpl.rounds.find(r=>r.id===roundId);if(!round)return;
+  const cp=round.competencies[ci];if(!cp)return;
+  const name=prompt('Competency name:',cp.name)?.trim();
+  if(!name||name===cp.name)return;
+  cp.name=name;saveRoleTemplate(rid);refreshITBody(rid);
+}
+// Legacy compat stubs (no-ops — replaced by template system)
+function openAddRoundModal(rid,cid){openInterviewTemplate(rid);}
+function saveNewRound(rid,cid){addRoundIT(rid);}// legacy compat
+function deleteCustomRound(roundId,rid,cid){openInterviewTemplate(rid);}// legacy compat
+function editRoundName(roundId,rid,cid){openInterviewTemplate(rid);}// legacy compat
 function renderScoreCard(cid){
   const rid=candidates.find(x=>x.id===cid)?.rid;
   const fbStages=getRoleFBStages(rid);
@@ -1998,7 +2087,7 @@ function renderScoreCard(cid){
   const hired=overallAvg>=3.0;
   return`<div class="card" style="margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Interview Score</div>
-    ${scored.map(s=>{const cr=customRounds.find(r=>r.name===s.stage&&r.rid===rid);const sc=STAGE_C[s.stage]||(cr?cr.color:'#4F46E5');return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">${s.stage}</span><span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span></div><div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div></div></div>`;}).join('')}
+    ${scored.map(s=>{const sc=getRoundColor(rid,s.stage);return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">${s.stage}</span><span style="font-size:12px;font-weight:700;color:${sc}">${s.avg.toFixed(1)}/5</span></div><div style="height:4px;border-radius:3px;background:#F3F4F6;overflow:hidden"><div style="height:100%;border-radius:3px;background:${sc};width:${Math.round(s.avg/5*100)}%"></div></div></div>`;}).join('')}
     <div style="height:1px;background:var(--border);margin:12px 0"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:12px;font-weight:600">Overall Average</span><span style="font-size:14px;font-weight:800;color:${hired?'#16A34A':'#DC2626'}">${overallAvg.toFixed(1)}/5</span></div>
     <div style="height:8px;border-radius:5px;background:#F3F4F6;overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:5px;background:${hired?'#16A34A':'#DC2626'};width:${pct}%;transition:width .5s"></div></div>
@@ -2158,7 +2247,7 @@ function renderPipelineCands(){
         <div><div style="font-weight:600">${c.name}</div>${c.yoe?`<div style="font-size:11px;color:var(--muted)">${c.yoe} yrs</div>`:''}</div>
       </div></td>
       <td onclick="event.stopPropagation()">
-        <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${STAGE_C[c.stage]||'#E5E7EB'}55;background:${STAGE_C[c.stage]||'#F3F4F6'}18;color:${STAGE_C[c.stage]||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
+        <select onchange="setPipStage('${c.id}',this.value)" style="border:1px solid ${getRoundColor(c.rid,c.stage)||'#E5E7EB'}55;background:${getRoundColor(c.rid,c.stage)||'#F3F4F6'}18;color:${getRoundColor(c.rid,c.stage)||'#6B7280'};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;outline:none;cursor:pointer">
           ${getRoleStages(c.rid).map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}
         </select>
       </td>
@@ -2225,17 +2314,17 @@ function renderPipelineProfile(){
 
   <!-- Feedback by round -->
   <div style="font-size:15px;font-weight:700;margin-bottom:14px">Interview Feedback</div>
-  ${FB_STAGES.map(stage=>{
+  ${getRoleFBStages(c.rid).map(stage=>{
     const sfb=cfb.filter(f=>f.stage===stage);
     const isCurrent=c.stage===stage;
+    const _sc=getStageColor(c.rid,stage);
     return`
-    <div class="card" style="margin-bottom:12px;border-left:3px solid ${isCurrent?STAGE_C[stage]:'#E5E7EB'}">
+    <div class="card" style="margin-bottom:12px;border-left:3px solid ${isCurrent?_sc:'#E5E7EB'}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sfb.length?'12px':'0'}">
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="width:8px;height:8px;border-radius:50%;background:${isCurrent?STAGE_C[stage]:'#D1D5DB'};flex-shrink:0"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${isCurrent?_sc:'#D1D5DB'};flex-shrink:0"></div>
           <span style="font-size:13px;font-weight:700;color:${isCurrent?'var(--text)':'var(--muted)'}">${stage}</span>
-          ${S.user?.role==='admin'?`<button onclick="event.stopPropagation();renameDefaultStage('${stage.replace(/'/g,"\\'")}',null)" title="Rename round" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--muted);display:flex;align-items:center;opacity:0.6" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
-          ${isCurrent?`<span style="font-size:10px;font-weight:700;color:${STAGE_C[stage]};background:${STAGE_C[stage]}18;padding:2px 8px;border-radius:20px">Current Stage</span>`:''}
+          ${isCurrent?`<span style="font-size:10px;font-weight:700;color:${_sc};background:${_sc}18;padding:2px 8px;border-radius:20px">Current Stage</span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           ${sfb.length?`<span class="badge" style="background:#EEF2FF;color:#4F46E5">${sfb.length} note${sfb.length>1?'s':''}</span>`:''}
@@ -2287,35 +2376,45 @@ function submitFBPip(cid,stage){
   renderPipelineProfile();
 }
 
-// ── EDIT ROUND NAMES ──────────────────────────────────────────────
-function renameDefaultStage(stage,cid){
-  const idx=STAGES.indexOf(stage);if(idx===-1)return;
+// ── EDIT ROUND NAMES (per-role) ────────────────────────────────────
+function renameRoleStage(stageName,rid,cid){
+  // stageName is the current display name; find the default name
+  const ridMap=roleStageNames[rid]||{};
+  const defaultName=Object.entries(ridMap).find(([k,v])=>v===stageName)?.[0]||stageName;
+  if(!_DEFAULT_STAGES.includes(defaultName))return;
+  const roleName=openRoles.find(r=>r.id===rid)?.title||'this role';
   modal(`<div style="font-size:15px;font-weight:700;margin-bottom:4px">Rename Round</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Updates across all jobs and candidates.</div>
-    <input id="rn-single" class="input" value="${stage.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box" autofocus>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Only applies to <strong>${roleName}</strong>. Other roles are not affected.</div>
+    <input id="rn-single" class="input" value="${stageName.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box" autofocus>
     <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
       <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveOneStageName(${idx},'${cid}')">Save</button>
+      <button class="btn btn-primary" onclick="saveRoleStage('${defaultName.replace(/'/g,"\\'")}','${rid}',${cid?`'${cid}'`:'null'})">Save</button>
     </div>`);
   setTimeout(()=>{const el=document.getElementById('rn-single');if(el){el.focus();el.select();}},80);
 }
-function saveOneStageName(idx,cid){
+function saveRoleStage(defaultName,rid,cid){
   const newName=(document.getElementById('rn-single')?.value||'').trim();
   if(!newName){toast('Name required','err');return;}
-  if(STAGES.some((s,i)=>i!==idx&&s===newName)){toast('Name already in use','err');return;}
-  const oldName=STAGES[idx];
-  if(newName!==oldName){
-    const newNames=STAGES.map((s,i)=>i===idx?newName:s);
-    candidates=candidates.map(c=>c.stage===oldName?{...c,stage:newName}:c);
-    feedback=feedback.map(f=>f.stage===oldName?{...f,stage:newName}:f);
-    schedule=schedule.map(s=>s.round===oldName?{...s,round:newName}:s);
-    applyStageNames(newNames);
-    sbSave('stage_names',newNames);
-    sbSave('candidates',candidates);
-    sbSave('feedback',feedback);
-    sbSave('schedule',schedule);
-    toast('Round renamed ✓');
-  }
+  const oldDisplayName=(roleStageNames[rid]&&roleStageNames[rid][defaultName])||defaultName;
+  if(newName===oldDisplayName){closeModal();return;}
+  // Check no duplicate within this role's stages
+  const roleStages=getRoleStages(rid);
+  if(roleStages.some(s=>s!==oldDisplayName&&s===newName)){toast('Name already in use for this role','err');return;}
+  // Update per-role map
+  if(!roleStageNames[rid])roleStageNames[rid]={};
+  if(newName===defaultName){delete roleStageNames[rid][defaultName];}
+  else{roleStageNames[rid][defaultName]=newName;}
+  // Get all candidate IDs for this role
+  const roleCids=new Set(candidates.filter(c=>c.rid===rid).map(c=>c.id));
+  // Update candidates, feedback, schedule only for this role
+  candidates=candidates.map(c=>{if(c.rid!==rid)return c;return c.stage===oldDisplayName?{...c,stage:newName}:c;});
+  feedback=feedback.map(f=>{if(!roleCids.has(f.cid))return f;return f.stage===oldDisplayName?{...f,stage:newName}:f;});
+  schedule=schedule.map(s=>{if(!roleCids.has(s.cid))return s;return s.round===oldDisplayName?{...s,round:newName}:s;});
+  sbSave('role_stage_names',roleStageNames);
+  sbSave('candidates',candidates);
+  sbSave('feedback',feedback);
+  sbSave('schedule',schedule);
+  toast('Round renamed for this role ✓');
   closeModal();
   if(cid){refreshFBSection(cid);}else{renderPage();}
 }
@@ -2355,7 +2454,7 @@ function showFBModal(cid){
   modal(`<div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Interview Feedback</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:18px">${c.name} · ${roleOf(c.rid)?.title||''}</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><label class="label">Round *</label><select class="input" id="fb-st">${FB_STAGES.map(s=>`<option value="${s}"${s===c.stage&&FB_STAGES.includes(c.stage)?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div><label class="label">Round *</label><select class="input" id="fb-st">${getRoleFBStages(c.rid).map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('')}</select></div>
       <div><label class="label">Feedback *</label><textarea class="input" id="fb-tx" rows="4" placeholder="Your assessment…" style="resize:vertical"></textarea></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
