@@ -2456,7 +2456,9 @@ function showAddCand(preRid=''){
 function submitAddCand(){
   const name=document.getElementById('ac-n')?.value.trim();
   if(!name){toast('Name required','err');return;}
-  candidates.push({id:String(Date.now()),rid:document.getElementById('ac-r')?.value,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:'Screening',added:new Date().toISOString().split('T')[0]});
+  const rid=document.getElementById('ac-r')?.value;
+  const firstStage=getRoleStages(rid)[0]||'Screening';
+  candidates.push({id:String(Date.now()),rid,name,yoe:document.getElementById('ac-y')?.value||'',skills:document.getElementById('ac-sk')?.value||'',li:document.getElementById('ac-l')?.value||'',cv:document.getElementById('ac-c')?.value||'',email:'',phone:'',cctc:'',ectc:'',notice:'',status:document.getElementById('ac-s')?.value||'yellow',stage:firstStage,added:new Date().toISOString().split('T')[0]});
   sbSave('candidates',candidates);
   closeModal();toast(name+' added to pipeline');
   renderPage();
