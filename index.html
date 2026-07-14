@@ -107,8 +107,9 @@ tr:hover td{background:#F9FAFB}
 // ── CONSTANTS ─────────────────────────────────────────────────────
 const _DEFAULT_STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
 const _DEFAULT_STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
-const _DEFAULT_FB_STAGES=['Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
+const _DEFAULT_FB_STAGES=['Screening Call','Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
 const _DEFAULT_FB_COMPETENCIES={
+  'Screening Call':['Communication Skills','Role & Culture Fit','Motivation & Interest','Availability & Notice Period','Overall First Impression'],
   'Behavioral Round':['Seriousness & Role Alignment','Communication & Impact Orientation','AI Adaptability','Continuous Learning Mindset','Collaboration & Leadership Mindset','Technical Competency (if required)'],
   'Discussion Round':['Excitement for Role','AI-First Engineering','Frontend Depth','Technical Depth','Documentation Mindset','Systems Builder','Curiosity','Communication'],
   'Technical Round':['Ownership & Follow-Through','Documentation-Before-Code Mindset','Ambiguity & Cross-Functional Collaboration','Mission Alignment & Purpose','Reliability Under Pressure'],
@@ -645,7 +646,7 @@ function renderDash(){
         </select>`:''}
         ${S.dashCard==='interviewStage'?`<select class="input" id="dash-round-filter" style="width:178px;font-size:12px" onchange="changeDashRoundFilter(this.value)">
           <option value="all">All Rounds</option>
-          ${['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion / Offer Roll Out'].map(r=>`<option value="${r}"${S.dashRoundFilter===r?' selected':''}>${r}</option>`).join('')}
+          ${getDashRoundDefs(S.dashRoleFilter).map(d=>`<option value="${d.l}"${S.dashRoundFilter===d.l?' selected':''}>${d.l}</option>`).join('')}
         </select>`:''}
         <select class="input" id="dash-role-filter" style="width:148px;font-size:12px" onchange="changeDashFilter(this.value)">
           <option value="all">All Roles</option>
@@ -755,6 +756,25 @@ function changeDashRoundFilter(val){
 const _OB_STAGE_COLS={'Joined':'#16A34A','Early Exit':'#CA8A04','Dropped':'#DC2626',"Didn't Accept":'#6B7280','Offer Roll Out':'#2563EB'};
 const _OB_ALL_STAGES=['Joined','Early Exit','Dropped',"Didn't Accept",'Offer Roll Out'];
 
+function getDashRoundDefs(dashRoleFilter){
+  const seen=new Set();
+  const defs=[];
+  const addDef=(name,color)=>{if(!seen.has(name)){seen.add(name);defs.push({l:name,stages:[name],c:color});}};
+  if(dashRoleFilter&&dashRoleFilter!=='all'){
+    const role=openRoles.find(r=>r.title===dashRoleFilter);
+    if(role){
+      getRoleTemplate(role.id).rounds.forEach((r,i)=>addDef(r.name,_CR_COLORS[i%_CR_COLORS.length]));
+      addDef('Offer Letter Rolled Out','#16A34A');
+      return defs;
+    }
+  }
+  _DEFAULT_FB_STAGES.forEach((name,i)=>addDef(name,_CR_COLORS[i%_CR_COLORS.length]));
+  Object.values(interviewTemplates).forEach(tmpl=>(tmpl.rounds||[]).forEach(r=>addDef(r.name,_CR_COLORS[defs.length%_CR_COLORS.length])));
+  if(candidates.some(c=>c.stage==='Screening'))addDef('Screening','#6366F1');
+  addDef('Offer Letter Rolled Out','#16A34A');
+  return defs;
+}
+
 function getDashData(){
   const roleOf=c=>openRoles.find(r=>r.id===c.rid)?.title||'Other';
   const key=S.dashCard;
@@ -834,13 +854,7 @@ function getDashData(){
 
   // ── Interview Stage card ──
   if(key==='interviewStage'){
-    const _ROUND_DEFS=[
-      {l:'Screening',stages:['Screening'],c:'#6366F1'},
-      {l:'Behavioral Round',stages:['Behavioral Round'],c:'#7C3AED'},
-      {l:'Discussion Round',stages:['Discussion Round'],c:'#0EA5E9'},
-      {l:'Technical Round',stages:['Technical Round'],c:'#F59E0B'},
-      {l:'Final Discussion / Offer Roll Out',stages:['Final Discussion','Offer Letter Rolled Out'],c:'#16A34A'},
-    ];
+    const _ROUND_DEFS=getDashRoundDefs(S.dashRoleFilter);
     const activePool=candidates.filter(c=>c.status!=='red');
     const allRoles=[...new Set(activePool.map(c=>roleOf(c)))].sort();
     let subset=activePool;
