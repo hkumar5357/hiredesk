@@ -107,9 +107,9 @@ tr:hover td{background:#F9FAFB}
 // ── CONSTANTS ─────────────────────────────────────────────────────
 const _DEFAULT_STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion','Offer Letter Rolled Out'];
 const _DEFAULT_STAGE_C={'Screening':'#8B5CF6','Behavioral Round':'#3B82F6','Discussion Round':'#0EA5E9','Technical Round':'#EC4899','Final Discussion':'#F59E0B','Offer Letter Rolled Out':'#16A34A'};
-const _DEFAULT_FB_STAGES=['Screening Call','Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
+const _DEFAULT_FB_STAGES=['Screening','Behavioral Round','Discussion Round','Technical Round','Final Discussion'];
 const _DEFAULT_FB_COMPETENCIES={
-  'Screening Call':['Communication Skills','Role & Culture Fit','Motivation & Interest','Availability & Notice Period','Overall First Impression'],
+  'Screening':['Communication Skills','Role & Culture Fit','Motivation & Interest','Availability & Notice Period','Overall First Impression'],
   'Behavioral Round':['Seriousness & Role Alignment','Communication & Impact Orientation','AI Adaptability','Continuous Learning Mindset','Collaboration & Leadership Mindset','Technical Competency (if required)'],
   'Discussion Round':['Excitement for Role','AI-First Engineering','Frontend Depth','Technical Depth','Documentation Mindset','Systems Builder','Curiosity','Communication'],
   'Technical Round':['Ownership & Follow-Through','Documentation-Before-Code Mindset','Ambiguity & Cross-Functional Collaboration','Mission Alignment & Purpose','Reliability Under Pressure'],
@@ -136,6 +136,11 @@ function getRoleTemplate(rid){
     interviewTemplates[rid]=getDefaultTemplate(rid);
     const legacy=(typeof customRounds!=='undefined'?customRounds:[]).filter(r=>r.rid===rid);
     legacy.forEach(cr=>{if(!interviewTemplates[rid].rounds.find(r=>r.name===cr.name)){interviewTemplates[rid].rounds.push({id:cr.id,name:cr.name,mode:'Google Meet',order:interviewTemplates[rid].rounds.length,competencies:cr.competencies||[]});}});
+  }
+  // Always ensure 'Screening' is the first stage for every role
+  const t=interviewTemplates[rid];
+  if(t&&t.rounds&&!t.rounds.find(r=>r.name==='Screening')){
+    t.rounds.unshift({id:'screening_'+rid,name:'Screening',mode:'Google Meet',order:0,competencies:[]});
   }
   return interviewTemplates[rid];
 }
